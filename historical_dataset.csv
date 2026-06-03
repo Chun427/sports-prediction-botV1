@@ -1,0 +1,1 @@
+game_id,date,sport,league,home_team,away_team,home_odds,away_odds,draw_odds,spread,total_line,home_win_prob,away_win_prob,home_avg_score,away_avg_score,home_std,away_std,bookmaker_count,vig_pct,value_edge,kelly_fraction,pred_mode,actual_home_score,actual_away_score,moneyline_hit,spread_hit,ou_hit,exact_hit
