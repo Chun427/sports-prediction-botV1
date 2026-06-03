@@ -1,0 +1,209 @@
+name: Sports Prediction Bot
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # 每 30 分鐘
+  workflow_dispatch:          # 手動觸發
+
+permissions:
+  contents: write             # 允許 git commit 推送狀態檔
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Python ────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ── 3. 依賴快取 ──────────────────────────────────────
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
+
+      # ── 4. 安裝套件 ──────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests numpy schedule \
+                      nba_api pybaseball \
+                      scikit-learn xgboost joblib pandas \
+                      thefuzz python-Levenshtein
+        continue-on-error: false
+
+      # ── 5. 還原持久狀態（flags / weekly / team_stats / metrics / dataset）
+      - name: Restore persistent state
+        uses: actions/cache@v4
+        with:
+          path: |
+            flags.json
+            weekly_games.json
+            team_stats.json
+            metrics.json
+            historical_dataset.csv
+          key: persistent-state-v1
+          restore-keys: persistent-state-v1
+
+      # ── 6. 還原 ML 模型 ──────────────────────────────────
+      - name: Restore ML models
+        uses: actions/cache@v4
+        with:
+          path: |
+            model_A.pkl
+            model_B.pkl
+          key: ml-models-v1
+          restore-keys: ml-models-v1
+
+      # ── 7. 確認 Secrets ──────────────────────────────────
+      - name: Validate secrets
+        run: |
+          if [ -z "$TG_TOKEN" ]; then
+            echo "::error::TG_TOKEN 未設定"
+            exit 1
+          fi
+          if [ -z "$TG_CHAT" ]; then
+            echo "::error::TG_CHAT 未設定"
+            exit 1
+          fi
+          if [ -z "$ODDS_API_KEY" ]; then
+            echo "::error::ODDS_API_KEY 未設定"
+            exit 1
+          fi
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+
+      # ── 8. 主程式 push ────────────────────────────────────
+      - name: Run push
+        run: python sports_prediction.py push
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true   # push 失敗不中斷 CI
+
+      # ── 9. 嘗試訓練 XGBoost（資料不足時靜默跳過）──────────
+      - name: Try train XGBoost
+        run: python train.py
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true
+
+      # ── 10. 儲存持久狀態 ─────────────────────────────────
+      - name: Save persistent state
+        uses: actions/cache@v4
+        with:
+          path: |
+            flags.json
+            weekly_games.json
+            team_stats.json
+            metrics.json
+            historical_dataset.csv
+          key: persistent-state-v1
+
+      # ── 11. 儲存 ML 模型 ─────────────────────────────────
+      - name: Save ML models
+        uses: actions/cache@v4
+        with:
+          path: |
+            model_A.pkl
+            model_B.pkl
+          key: ml-models-v1
+
+      # ── 12. Git push 狀態檔（雙重備份）──────────────────
+      - name: Commit and push state files
+        run: |
+          git config user.email "bot@sports-prediction"
+          git config user.name  "SportsBot"
+          git add flags.json weekly_games.json team_stats.json \
+                  metrics.json historical_dataset.csv \
+                  model_A.pkl model_B.pkl 2>/dev/null || true
+          git diff --cached --quiet || \
+            git commit -m "[bot] update state $(date -u +%Y-%m-%d\ %H:%M)" && \
+            git push
+        continue-on-error: true   # commit 失敗不中斷 CI
+
+  # ── 週日週報（每週日 13:00 UTC = 台灣時間 21:00）─────────
+  weekly-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests numpy scikit-learn xgboost joblib pandas thefuzz
+        continue-on-error: true
+
+      - name: Restore persistent state
+        uses: actions/cache@v4
+        with:
+          path: |
+            flags.json
+            weekly_games.json
+            team_stats.json
+            metrics.json
+            historical_dataset.csv
+          key: persistent-state-v1
+          restore-keys: persistent-state-v1
+
+      - name: Push weekly report (Sunday 21:00 TW only)
+        run: |
+          HOUR=$(TZ=Asia/Taipei date +%-H)
+          DOW=$(TZ=Asia/Taipei date +%u)
+          if [ "$DOW" -eq 7 ] && [ "$HOUR" -ge 20 ] && [ "$HOUR" -le 21 ]; then
+            python sports_prediction.py weekly
+          else
+            echo "非週報時間（DOW=$DOW HOUR=$HOUR），跳過"
+          fi
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true
+
+      - name: Save persistent state
+        uses: actions/cache@v4
+        with:
+          path: |
+            flags.json
+            weekly_games.json
+            team_stats.json
+            metrics.json
+            historical_dataset.csv
+          key: persistent-state-v1
