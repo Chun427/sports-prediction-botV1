@@ -112,19 +112,54 @@ def _empty_verify() -> dict:
 #  時間視窗判斷
 # ══════════════════════════════════════════════════════════
 
-def in_push_window(game_time_utc: str) -> bool:
+def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
-    推播視窗：賽後 6 小時 ～ 未來 16 小時。
-    game_time_utc = ISO 字串（UTC）
+    推播視窗（統一 Asia/Taipei）：
+      主窗口：開賽前 30 分鐘 ～ 3 小時（preferred）
+      備用窗口：開賽前 3 ～ 6 小時（fallback）
+    任一符合即推播。game_time_utc 解析失敗時 fallback 用 game_time_tw。
     """
-    try:
-        game_dt = datetime.fromisoformat(game_time_utc.replace("Z", "+00:00"))
-        now     = datetime.now(TW).astimezone(timezone.utc)
-        diff_h  = (game_dt - now).total_seconds() / 3600
-        return -6 <= diff_h <= 16
-    except Exception as exc:
-        logger.warning("[verifier] in_push_window 解析失敗 %s: %s", game_time_utc, exc)
+    now_tw  = datetime.now(TW)
+    game_dt = _parse_utc_to_tw(game_time_utc)
+    if game_dt is None and game_time_tw:
+        game_dt = _parse_tw_str(game_time_tw)
+    if game_dt is None:
+        logger.warning("[verifier] in_push_window 無法解析 utc=%s tw=%s",
+                       game_time_utc, game_time_tw)
         return False
+    diff_h    = (game_dt - now_tw).total_seconds() / 3600
+    preferred = 0.5 <= diff_h <= 3.0
+    fallback  = 3.0 < diff_h <= 6.0
+    if preferred or fallback:
+        zone = "主窗口" if preferred else "備用窗口"
+        logger.info("[verifier] %s 符合%s（距開賽%.1fh）",
+                    game_time_tw or game_time_utc, zone, diff_h)
+    return preferred or fallback
+
+
+def _parse_utc_to_tw(utc_str: str):
+    """UTC ISO string → TW aware datetime，失敗回傳 None。"""
+    try:
+        if not utc_str:
+            return None
+        return datetime.fromisoformat(utc_str.replace("Z", "+00:00")).astimezone(TW)
+    except Exception:
+        return None
+
+
+def _parse_tw_str(tw_str: str):
+    """MM/DD HH:MM → TW aware datetime，含跨年保護。"""
+    try:
+        if not tw_str:
+            return None
+        now  = datetime.now(TW)
+        year = now.year
+        dt   = datetime.strptime(f"{year}/{tw_str}", "%Y/%m/%d %H:%M").replace(tzinfo=TW)
+        if (now - dt).days > 180:
+            dt = dt.replace(year=year + 1)
+        return dt
+    except Exception:
+        return None
 
 
 def should_force_trigger(game_time_utc: str, completed: bool) -> bool:
