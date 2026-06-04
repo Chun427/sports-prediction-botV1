@@ -6,28 +6,31 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)
 
----
+-----
 
 ## ✨ 核心功能
 
-| 功能 | 說明 |
-|---|---|
-| 🎲 蒙特卡羅模擬 | 每場比賽執行 100 萬次模擬，產生勝率與最可能比分 |
-| 📐 去 Vig 真實勝率 | 彙整多家莊家賠率，去除抽水後還原真實機率 |
-| 📈 真實數據修正 | NBA 用 `nba_api` 抓近 10 場場均得分；MLB 用 `pybaseball` 抓本季場均得分 |
-| 💎 Value Betting | 模型勝率 vs 市場隱含勝率，差距 >5% 標記為有價值下注 |
-| 💰 Kelly Criterion | 依真實 edge 計算最佳資金下注比例 |
-| 🤖 AI 混合預測 | 歷史數據累積 30 筆後自動訓練 XGBoost，優先使用 AI 預測；模型缺失時自動降級為規則模式 |
-| 📋 歷史數據記錄 | 賽前特徵自動寫入 CSV，賽後自動補填實際比分 |
-| 🔄 自動賽後驗證 | 比賽結束後自動推播獨贏 / 讓分 / 大小 / 精準比分四項命中報告 |
-| ⏰ 強制補漏 | `completed=False` 但開賽已達 4 小時，自動強制觸發賽後推播 |
-| 🏆 世界盃特報 | 冠軍 / 金靴 / 金球 / 金手套賠率即時分析 |
-| 📊 系統自學指標 | 週報後自動附帶命中率、Kelly 有效性、Edge 偏差等統計 |
-| 📅 週報 | 每週日 21:00 自動推播本週所有賽事的驗證摘要 |
+|功能               |說明                                                    |
+|-----------------|------------------------------------------------------|
+|🎲 蒙特卡羅模擬         |每場比賽執行 100 萬次模擬，產生勝率與最可能比分                            |
+|📐 去 Vig 真實勝率     |彙整多家莊家賠率，去除抽水後還原真實機率                                  |
+|📈 真實數據修正         |NBA 用 `nba_api` 抓近 10 場場均得分；MLB 用 `pybaseball` 抓本季場均得分|
+|💎 Value Betting  |模型勝率 vs 市場隱含勝率，差距 >5% 標記為有價值下注                        |
+|💰 Kelly Criterion|依真實 edge 計算最佳資金下注比例                                   |
+|🤖 AI 混合預測        |歷史數據累積 30 筆後自動訓練 XGBoost，優先使用 AI 預測；模型缺失時自動降級為規則模式    |
+|📋 歷史數據記錄         |賽前特徵自動寫入 CSV，賽後自動補填實際比分                               |
+|🔄 自動賽後驗證         |比賽結束後自動推播獨贏 / 讓分 / 大小 / 精準比分四項命中報告                    |
+|⏰ 強制補漏           |`completed=False` 但開賽已達 4 小時，自動強制觸發賽後推播               |
+|📊 進度條視覺化         |去Vig市場勝率 vs 蒙特卡羅模擬勝率分開顯示，差異即為 Value 核心依據              |
+|🏅 比分排行榜          |Top 5 最可能比分以 🥇🥈🥉 獎牌格式呈現，附帶全隊名                         |
+|🎰 台灣運彩建議         |依實際 Edge 動態排序主推／次要／備選，附劃位說明，不固定推獨贏                    |
+|🏆 世界盃特報          |冠軍 / 金靴 / 金球 / 金手套賠率即時分析                              |
+|📊 系統自學指標         |週報後自動附帶命中率、Kelly 有效性、Edge 偏差等統計                       |
+|📅 週報             |每週日 21:00 自動推播本週所有賽事的驗證摘要                             |
 
 **支援運動：NBA、MLB、FIFA 世界盃、WBC 經典賽、奧運男籃**
 
----
+-----
 
 ## 📁 檔案結構
 
@@ -58,7 +61,7 @@ model_B.pkl              # XGBoost 客隊得分模型
 tournament_state.json    # 世界盃淘汰狀態（世界盃期間）
 ```
 
----
+-----
 
 ## 🚀 部署步驟
 
@@ -73,11 +76,12 @@ cd sports-prediction-bot
 
 GitHub repo → **Settings → Secrets and variables → Actions**，新增以下三個 Secret：
 
-| Secret 名稱 | 說明 | 取得方式 |
-|---|---|---|
-| `TG_TOKEN` | Telegram Bot Token | 向 [@BotFather](https://t.me/BotFather) 建立 Bot |
-| `TG_CHAT` | Telegram Chat ID | 傳訊給 Bot 後查詢 `getUpdates` |
-| `ODDS_API_KEY` | The Odds API 金鑰 | [the-odds-api.com](https://the-odds-api.com) 免費註冊 |
+|Secret 名稱     |說明                |取得方式                                             |
+|--------------|------------------|-------------------------------------------------|
+|`TG_TOKEN`    |Telegram Bot Token|向 [@BotFather](https://t.me/BotFather) 建立 Bot    |
+|`TG_CHAT`     |Telegram Chat ID  |傳訊給 Bot 後查詢 `getUpdates`                         |
+|`ODDS_API_KEY`|The Odds API 金鑰   |[the-odds-api.com](https://the-odds-api.com) 免費註冊|
+
 
 > ⚠️ 三個 Secrets 缺一不可，任何一個缺失 Actions 會立即顯示紅燈並停止執行。
 
@@ -96,7 +100,7 @@ git push
 
 確認 repo → **Actions** → 已啟用。Actions 每 30 分鐘自動執行，**無需任何手動操作**。
 
----
+-----
 
 ## 💬 Telegram 推播格式
 
@@ -106,35 +110,57 @@ git push
 🎯 精算師預測系統
 ⚡ 終極鎖定盤口（賽前 30 分鐘）
 ━━━━━━━━━━━━━━━━
-📅 台灣時間 05/28 13:00
-🏀 NBA 西區冠軍賽
-Spurs 🆚 Thunder
+📅 台灣時間 06/04 09:10
+⚾ MLB
+Los Angeles Angels 🆚 Colorado Rockies
 ━━━━━━━━━━━━━━━━
 🎲 1,000,000 次蒙特卡羅模擬
-📊 參考莊家數：4 家｜抽水：3.2%
+📊 參考莊家數：4 家｜抽水：3.1%
 🗃️ 數據來源：AI模型+真實數據+賠率
 ⚙️ 預測模式：🤖 AI預測
 🎯 信心指數：🟢 高（85%）
-💎 Value Bet！Thunder 優勢 +7.2%
+💎 Value Bet！Angels 優勢 +11.5%
 ━━━━━━━━━━━━━━━━
-📈 勝率分析
-Spurs 勝率：42.1%｜Thunder 勝率：57.9%
-━━━━━━━━━━━━━━━━
-🏆 最可能比分 Top 5
-  1. 112-108 (8.3%)
-  2. 110-106 (7.1%)
-  3. 115-109 (6.8%)
-  4. 108-104 (6.2%)
-  5. 118-112 (5.9%)
-━━━━━━━━━━━━━━━━
-📐 讓分分析
-Thunder -5.5｜覆蓋率 58.3%
-📊 大小分分析
-大分門檻：221.5 分｜Over：53.2%｜Under：46.8%
+📐 去Vig真實勝率
+Angels ██████░░░░ 58.2%（市場賠率）
+Rockies ████░░░░░░ 41.8%
+
+🎲 蒙特卡羅模擬勝率
+Angels ███████░░░ 69.7%
+Rockies ███░░░░░░░ 30.3%
 ━━━━━━━━━━━━━━━━
 📈 Value分析
-Spurs 優勢：-3.1%｜Thunder 優勢：+7.2%
-💰 Kelly 建議：2.5% 資金
+Angels 優勢：+11.5%｜Rockies 優勢：-4.3%
+━━━━━━━━━━━━━━━━
+🏆 最可能出現的比分
+🥇 Los Angeles Angels 5–3 Colorado Rockies（3.2%）
+🥈 Los Angeles Angels 5–4 Colorado Rockies（3.1%）
+🥉 Los Angeles Angels 6–3 Colorado Rockies（3.0%）
+4️⃣ 和局 4–4（2.9%）
+5️⃣ Los Angeles Angels 6–4 Colorado Rockies（2.8%）
+━━━━━━━━━━━━━━━━
+📊 盤口深度分析
+讓分盤口 Angels -1.5
+總分大小 8.5（大分 🔼）
+獨贏賠率 Angels:-154｜Rockies:+130
+━━━━━━━━━━━━━━━━
+💰 台灣運彩實戰建議
+
+🔮【主推】
+讓分盤 → Los Angeles Angels(-1.5)
+› 劃位：選 [主隊讓球]
+› Edge：+19.7%
+
+💎【次要】
+獨贏盤 → Los Angeles Angels 勝出
+› 劃位：選 [主隊勝]
+› 💡 Kelly建議：2.5% 資金
+› Edge：+11.5%
+
+⭐【備選】
+總分大小 → 大分(8.5)
+› 劃位：選 [大分] 8.5
+› Edge：+4.3%
 ━━━━━━━━━━━━━━━━
 ⚠️ 數據分析，請理性投注。
 ```
@@ -178,7 +204,7 @@ Edge偏差：+2.1%（+偏高估，-偏低估）
 ⚠️ 數據分析，請理性投注。
 ```
 
----
+-----
 
 ## 🖥️ 指令速查
 
@@ -204,7 +230,7 @@ python backtester.py grid               # Grid Search 掃描最佳參數
 python backtester.py wc                 # 世界盃 Brier Score
 ```
 
----
+-----
 
 ## ⚙️ 排程邏輯
 
@@ -223,39 +249,40 @@ python backtester.py wc                 # 世界盃 Brier Score
 每次 CI 結束 → 嘗試訓練 XGBoost（資料不足時靜默跳過）
 ```
 
----
+-----
 
 ## 🤖 AI 模型說明
 
-| 項目 | 說明 |
-|---|---|
-| 演算法 | XGBoost 回歸（`reg:squarederror`） |
-| 預測目標 | 主隊得分（`model_A.pkl`）、客隊得分（`model_B.pkl`） |
-| 輸入特徵 | 賠率、讓分、大小盤、去 Vig 勝率、場均得分、標準差等共 13 項 |
-| 最少樣本 | 30 筆完整歷史數據才啟動訓練 |
-| AI 安全閥 | 預測偏離規則模式 >50% 自動降回規則，並印出警告 |
+|項目    |說明                                     |
+|------|---------------------------------------|
+|演算法   |XGBoost 回歸（`reg:squarederror`）         |
+|預測目標  |主隊得分（`model_A.pkl`）、客隊得分（`model_B.pkl`）|
+|輸入特徵  |賠率、讓分、大小盤、去 Vig 勝率、場均得分、標準差等共 13 項     |
+|最少樣本  |30 筆完整歷史數據才啟動訓練                        |
+|AI 安全閥|預測偏離規則模式 >50% 自動降回規則，並印出警告             |
 
 推播訊息中 `⚙️ 預測模式` 欄位會明確標示 `🤖 AI預測` 或 `📐 規則模擬`。
 
----
+-----
 
 ## 🛡️ Fail-safe 機制
 
-| 情況 | 結果 |
-|---|---|
-| Secrets 缺失 | 立即印出錯誤，Actions 顯示**紅燈** |
-| Odds API 失敗（重試 3 次後） | Warning + 回退快取，CI **不中斷** |
-| `tournament_engine` 模組缺失 | 靜默跳過世界盃功能，推播**不中斷** |
-| `thefuzz` 未安裝 | 降級內建字串比對，功能**不中斷** |
-| AI 模型載入異常 | 靜默降回規則模式，推播**不中斷** |
-| AI 預測偏離 >50% | 自動降回規則模式 + 印出警告 |
-| `completed=False` 但逾 4 小時 | 強制觸發賽後推播（保護機制） |
-| 訓練資料不足 | 靜默跳過，CI **不顯示紅燈** |
-| git commit 無變更 | 靜默跳過，CI **不顯示紅燈** |
+|情況                       |結果                       |
+|-------------------------|-------------------------|
+|Secrets 缺失               |立即印出錯誤，Actions 顯示**紅燈**  |
+|Odds API 失敗（重試 3 次後）     |Warning + 回退快取，CI **不中斷**|
+|`tournament_engine` 模組缺失 |靜默跳過世界盃功能，推播**不中斷**      |
+|`thefuzz` 未安裝            |降級內建字串比對，功能**不中斷**       |
+|AI 模型載入異常                |靜默降回規則模式，推播**不中斷**       |
+|AI 預測偏離 >50%             |自動降回規則模式 + 印出警告          |
+|`completed=False` 但逾 4 小時|強制觸發賽後推播（保護機制）           |
+|訓練資料不足                   |靜默跳過，CI **不顯示紅燈**        |
+|git commit 無變更           |靜默跳過，CI **不顯示紅燈**        |
+
 
 > 原則：寧可不準，也不能掛掉。
 
----
+-----
 
 ## 📦 安裝套件（本機執行用）
 
@@ -268,7 +295,7 @@ pip install requests numpy schedule \
 
 GitHub Actions 會自動安裝，**不需要** `requirements.txt`。
 
----
+-----
 
 ## 🔑 Secrets 設定位置
 
@@ -282,6 +309,6 @@ GitHub Repo
             └── ODDS_API_KEY  ← The Odds API 金鑰
 ```
 
----
+-----
 
 > ⚠️ 本系統僅供數據分析參考，請理性投注。
