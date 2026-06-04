@@ -1,4 +1,4 @@
-# 🎯 精算師預測系統
+# 🎯 精算師預測系統 ·sports-prediction-bot
 
 全自動體育賽事預測機器人。每 30 分鐘透過 GitHub Actions 自動執行：抓取賽事 → AI/統計預測 → 推播 Telegram → 賽後驗證命中 → 累積訓練 XGBoost 模型。
 
