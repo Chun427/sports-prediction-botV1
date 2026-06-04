@@ -54,6 +54,11 @@ except ImportError:
     _HAS_TOURNAMENT = False
     logger.warning("tournament_engine 未找到，世界盃功能停用")
 
+try:
+    import worldcup_engine as wce; _HAS_WC_ENGINE = True
+except ImportError:
+    _HAS_WC_ENGINE = False; logger.warning("worldcup_engine 未找到，世足每日推播停用")
+
 #  賽事快取管理
 
 def _get_games(force_refresh: bool = False) -> list[dict]:
@@ -100,7 +105,7 @@ def push_today(debug: bool = False):
 
         try:
             # ── 推播視窗判斷 ──────────────────────────────
-            in_window = rv.in_push_window(game_time_utc)
+            in_window = rv.in_push_window(game_time_utc, game.get('game_time',''))
             if not in_window and not debug:
                 continue
 
@@ -146,6 +151,10 @@ def push_today(debug: bool = False):
 
         except Exception as exc:
             logger.warning("[main] push_today game_id=%s 失敗: %s", game_id, exc)
+
+    if _HAS_WC_ENGINE:
+        try: pushed_count += wce.check_and_push()
+        except Exception as exc: logger.warning("[main] worldcup_engine 失敗: %s", exc)
 
     if pushed_count == 0:
         nt.push_standby(
@@ -478,20 +487,13 @@ def main():
         push_metrics_manual()
 
     elif cmd == "train":
-        import train
-        train.run_training()
-
+        import train; train.run_training()
     elif cmd == "backtest":
-        import backtester
-        backtester.run_backtest()
-
+        import backtester; backtester.run_backtest()
     elif cmd == "--debug":
-        logger.info("[main] DEBUG 模式啟動")
-        push_today(debug=True)
-
+        logger.info("[main] DEBUG 模式"); push_today(debug=True)
     else:
-        logger.warning("[main] 未知指令: %s", cmd)
-        print("用法: python sports_prediction.py [push|fetch|weekly|wc|results|verify_all|metrics|train|backtest|--debug]")
+        print("用法: push|fetch|weekly|wc|results|verify_all|metrics|train|backtest|--debug")
 
 if __name__ == "__main__":
     main()
