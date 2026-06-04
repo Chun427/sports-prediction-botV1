@@ -24,6 +24,9 @@
 | 📊 進度條視覺化 | 去Vig市場勝率 vs 蒙特卡羅模擬勝率分開顯示，差異即為 Value 核心依據 |
 | 🏅 比分排行榜 | Top 5 最可能比分以 🥇🥈🥉 獎牌格式呈現，附帶全隊名 |
 | 🎰 台灣運彩建議 | 依實際 Edge 動態排序主推／次要／備選，附劃位說明，不固定推獨贏 |
+| 📊 風控資訊 | Kelly 值與建議下注比例顯示於每則賽前推播 |
+| 📈 EV 模型表現 | 賽後自動評估 EV 準確性、Edge 命中、Kelly 策略是否合理 |
+| 🏛️ 市場偏差分析 | 賽後顯示模型 vs 市場差異，標記低估／高估程度 |
 | 🏆 世界盃特報 | 冠軍 / 金靴 / 金球 / 金手套賠率即時分析 |
 | 📊 系統自學指標 | 週報後自動附帶命中率、Kelly 有效性、Edge 偏差等統計 |
 | 📅 週報 | 每週日 21:00 自動推播本週所有賽事的驗證摘要 |
@@ -107,74 +110,88 @@ git push
 
 ```
 🎯 精算師預測系統
-⚡ 終極鎖定盤口（賽前 30 分鐘）
-━━━━━━━━━━━━━━━━
-📅 台灣時間 06/04 09:10
-⚾ MLB
-Los Angeles Angels 🆚 Colorado Rockies
-━━━━━━━━━━━━━━━━
-🎲 1,000,000 次蒙特卡羅模擬
-📊 參考莊家數：4 家｜抽水：3.1%
-🗃️ 數據來源：AI模型+真實數據+賠率
-⚙️ 預測模式：🤖 AI預測
-🎯 信心指數：🟢 高（85%）
-💎 Value Bet！Angels 優勢 +11.5%
-━━━━━━━━━━━━━━━━
-📐 去Vig真實勝率
-Angels ██████░░░░ 58.2%（市場賠率）
-Rockies ████░░░░░░ 41.8%
+⚡ 量化預測模型（賽前 30 分鐘）
 
-🎲 蒙特卡羅模擬勝率
-Angels ███████░░░ 69.7%
-Rockies ███░░░░░░░ 30.3%
 ━━━━━━━━━━━━━━━━
+📅 台灣時間 06/05 09:41
+⚾ MLB
+Arizona Diamondbacks 🆚 Los Angeles Dodgers
+━━━━━━━━━━━━━━━━
+
+📐 去Vig真實勝率
+Arizona Diamondbacks  ████░░░░░░ 43.8%
+Los Angeles Dodgers   █████░░░░░ 56.2%
+
+蒙特卡羅模擬勝率
+Arizona Diamondbacks  ███░░░░░░░ 32.5%
+Los Angeles Dodgers   ██████░░░░ 67.5%
+
 📈 Value分析
-Angels 優勢：+11.5%｜Rockies 優勢：-4.3%
+Arizona Diamondbacks 優勢：-2.5%
+Los Angeles Dodgers 優勢：-1.4%
+
 ━━━━━━━━━━━━━━━━
 🏆 最可能出現的比分
-🥇 Los Angeles Angels 5–3 Colorado Rockies（3.2%）
-🥈 Los Angeles Angels 5–4 Colorado Rockies（3.1%）
-🥉 Los Angeles Angels 6–3 Colorado Rockies（3.0%）
-4️⃣ 和局 4–4（2.9%）
-5️⃣ Los Angeles Angels 6–4 Colorado Rockies（2.8%）
+🥇 Los Angeles Dodgers 6–4 Arizona Diamondbacks（2.7%）
+🥈 Los Angeles Dodgers 5–4 Arizona Diamondbacks（2.6%）
+🥉 Los Angeles Dodgers 6–3 Arizona Diamondbacks（2.4%）
+4️⃣ Los Angeles Dodgers 6–5 Arizona Diamondbacks（2.4%）
+5️⃣ Los Angeles Dodgers 5–3 Arizona Diamondbacks（2.4%）
+
 ━━━━━━━━━━━━━━━━
 📊 盤口深度分析
-讓分盤口 Angels -1.5
-總分大小 8.5（大分 🔼）
-獨贏賠率 Angels:-154｜Rockies:+130
+讓分盤口     Los Angeles Dodgers 1.5
+總分大小     9.5（大分 🔼）
+獨贏賠率     Arizona Diamondbacks:+116｜Los Angeles Dodgers:-136
+
 ━━━━━━━━━━━━━━━━
 💰 台灣運彩實戰建議
+🔮【主推】獨贏盤 → Los Angeles Dodgers 勝出
+💎【次要】總分大小 → 大分(9.5)
+⭐【備選】讓分盤 → Los Angeles Dodgers(+1.5)
 
-🔮【主推】
-讓分盤 → Los Angeles Angels(-1.5)
-› 劃位：選 [主隊讓球]
-› Edge：+19.7%
-
-💎【次要】
-獨贏盤 → Los Angeles Angels 勝出
-› 劃位：選 [主隊勝]
-› 💡 Kelly建議：2.5% 資金
-› Edge：+11.5%
-
-⭐【備選】
-總分大小 → 大分(8.5)
-› 劃位：選 [大分] 8.5
-› Edge：+4.3%
 ━━━━━━━━━━━━━━━━
-⚠️ 數據分析，請理性投注。
+📊 風控資訊
+- Kelly：0.42
+- 建議下注比例：4.2%
+
+━━━━━━━━━━━━━━━━
+📡 數據來源：AI模型+真實數據+賠率
+
+⚠️ 請理性投注。
 ```
 
-### 賽後驗證報告
+### 賽後結果
 
 ```
-📊 預測驗證報告 05/28
-🎯 今日命中率：3/4（75%）
-⚙️ 預測模式：🤖 AI預測
-━━━━━━━━━━━━━━━━
-獨贏盤      Thunder 勝   ✅
-精準比分    112-108       ❌
-讓分盤      覆蓋          ✅
-總分大小    Over          ✅
+📊 賽後結果
+📅 台灣時間 06/05
+
+⚾ Arizona Diamondbacks vs Los Angeles Dodgers
+
+━━━━━━━━━━━━━━━
+命中結果：3 / 4（75%）
+━━━━━━━━━━━━━━━
+
+獨贏：✅
+精準比分：❌
+讓分：✅
+大小分：✅
+
+────────────────
+
+📊 模型表現
+- EV預測準確性：✔ 正向
+- Edge命中：✔ 有效
+- Kelly策略：✔ 合理
+
+📊 模型 vs 市場
+模型優勢：Los Angeles Dodgers +4.8%
+市場偏差：中度低估 4.8%
+
+────────────────
+
+📌 預測模式：量化分析
 ```
 
 ### 週報 + 自學指標（每週日 21:00）
