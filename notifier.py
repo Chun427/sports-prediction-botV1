@@ -41,6 +41,12 @@ def _send(text: str, silent: bool = False) -> bool:
         if attempt < RETRY_COUNT:
             time.sleep(RETRY_DELAY)
     logger.error("[notifier] 推播最終失敗（已重試 %d 次）", RETRY_COUNT)
+    try:
+        alert = "\U0001f6a8 推播失敗\nfunction: _send\nstatus: Telegram API failed after retries"
+        requests.post(f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
+            json={"chat_id": TG_CHAT, "text": alert}, timeout=5)
+    except Exception:
+        pass
     return False
 
 
