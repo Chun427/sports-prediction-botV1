@@ -88,56 +88,50 @@ def _get_games(force_refresh: bool = False) -> list[dict]:
 #  push_today（核心流程）
 
 def push_today(debug: bool = False):
-    """
-    每 30 分鐘執行一次的主流程：
-    1. 取得賽事
-    2. 判斷推播視窗
-    3. 賽前預測推播（每天每場一次）
-    4. 賽後驗證推播
-    5. 無推播條件 → standby
-    """
     games = _get_games()
-    pushed_count = 0
-    skip_stats = {}
-
-    def _skip(reason, gid=""):
-        skip_stats[reason] = skip_stats.get(reason, 0) + 1
-        logger.info("[main] skip game_id=%s reason=%s", gid, reason)
+    pushed_count    = 0
+    time_window_block = 0
+    silent_hours_block = 0
+    duplicate_block = 0
+    model_reject    = 0
+    eligible_games  = 0
 
     for game in games:
         game_id       = game.get("game_id", "")
         game_time_utc = game.get("game_time_utc", "")
 
         try:
-            # ── 推播視窗判斷 ──────────────────────────────
-            in_window = rv.in_push_window(game_time_utc, game.get('game_time',''))
+            in_window = rv.in_push_window(game_time_utc, game.get("game_time", ""))
             if not in_window and not debug:
-                _skip("out_of_time_window", game_id)
+                time_window_block += 1
+                logger.info("[main] skip out_of_time_window game_id=%s", game_id)
                 continue
 
             if dm.get_flag(game_id).get("pre_pushed") and not dm.is_post_pushed(game_id):
                 [(_push_post_game(i), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
                 continue
+
             if rv.is_silent_hours() and not debug:
-                _skip("silent_hours", game_id)
-                continue
-            if dm.is_pushed_today(game_id) and not debug:
-                _skip("already_pushed", game_id)
+                silent_hours_block += 1
+                logger.info("[main] skip silent_hours game_id=%s", game_id)
                 continue
 
-            # 組裝 game_data
+            if dm.is_pushed_today(game_id) and not debug:
+                duplicate_block += 1
+                logger.info("[main] skip already_pushed game_id=%s", game_id)
+                continue
+
+            eligible_games += 1
             game_data = _build_game_data(game)
 
             if debug:
                 logger.info("[DEBUG] game_id=%s window=%s pushed_today=%s",
                             game_id, in_window, dm.is_pushed_today(game_id))
                 if pushed_count >= 2:
-                    continue   # debug 模式只強制模擬前兩場
+                    continue
 
-            # 執行預測
             result = pe.run_full_prediction(game_data)
 
-            # 推播
             ok = _push_pre_game(game, result)
             if ok:
                 dm.mark_pushed(game_id, sim_result={**result,
@@ -148,9 +142,12 @@ def push_today(debug: bool = False):
                 })
                 dm.append_pre_game_row(_build_csv_row(game, result))
                 pushed_count += 1
+            else:
+                model_reject += 1
 
         except Exception as exc:
             logger.warning("[main] push_today game_id=%s 失敗: %s", game_id, exc)
+            model_reject += 1
             if debug:
                 nt.push_raw(f"[DEBUG] game_id={game_id} exception: {exc}", silent=True)
 
@@ -159,20 +156,30 @@ def push_today(debug: bool = False):
         except Exception as exc: logger.warning("[main] worldcup_engine 失敗: %s", exc)
 
     if pushed_count == 0:
-        logger.info("[main] skip_stats=%s", skip_stats)
-        base = ["\u2699\ufe0f \u7cfb\u7d71\u5fc3\u8df3",
-                "\U0001f4cb \u76e3\u63a7\u8cfd\u4e8b\uff1a" + str(len(games)) + " \u5834",
-                "\U0001f4e1 \u672c\u8f2a\u63a8\u64ad\uff1a0 \u5834",
-                "\u2139\ufe0f \u539f\u56e0\uff1a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6"]
-        if skip_stats:
-            base.append("")
-            base.append("\U0001f4ca \u63a8\u64ad\u8df3\u904e\u539f\u56e0\u7d71\u8a08")
-            base += ["  " + k + "\uff1a" + str(v) + " \u5834" for k, v in skip_stats.items()]
-        nt.push_raw("\n".join(base), silent=True)
+        logger.info("[main] decision report total=%d tw=%d silent=%d dup=%d reject=%d eligible=%d pushed=0",
+                    len(games), time_window_block, silent_hours_block,
+                    duplicate_block, model_reject, eligible_games)
+        sep = "\u2501" * 14
+        msg = "\n".join([
+            "\u2699\ufe0f \u63a8\u64ad\u6c7a\u7b56\u5831\u544a",
+            sep,
+            "",
+            "\U0001f4cb \u7e3d\u8cfd\u4e8b\uff1a" + str(len(games)),
+            "",
+            "\u26d4 \u6642\u9593\u7a97\u963b\u64cb\uff1a" + str(time_window_block),
+            "\u26d4 \u975c\u9ed8\u6642\u6bb5\uff1a" + str(silent_hours_block),
+            "\u26d4 \u5df2\u63a8\u64ad\u904e\uff1a" + str(duplicate_block),
+            "\u26d4 \u6a21\u578b\u62d2\u7d55\uff1a" + str(model_reject),
+            "",
+            "\u2705 \u53ef\u9032\u5165\u6a21\u578b\uff1a" + str(eligible_games),
+            "\U0001f4e1 \u6700\u7d42\u63a8\u64ad\uff1a0",
+            "",
+            sep,
+            "\u2139\ufe0f \u672c\u8f2a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6",
+        ])
+        nt.push_raw(msg, silent=True)
 
     dm.git_commit_state()
-
-#  推播輔助（格式組裝 → notifier）
 
 def _push_pre_game(game: dict, result: dict) -> bool:
     from notifier import fmt_score_top5, fmt_betting_advice
