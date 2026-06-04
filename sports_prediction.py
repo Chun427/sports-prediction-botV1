@@ -89,12 +89,13 @@ def _get_games(force_refresh: bool = False) -> list[dict]:
 
 def push_today(debug: bool = False):
     games = _get_games()
-    pushed_count    = 0
-    time_window_block = 0
+    pushed_count       = 0
+    time_window_block  = 0
     silent_hours_block = 0
-    duplicate_block = 0
-    model_reject    = 0
-    eligible_games  = 0
+    duplicate_block    = 0
+    model_reject_count = 0   # prediction_engine 主動拒絕（result.get("reject")）
+    send_fail_count    = 0   # Telegram 發送失敗 / notifier 例外
+    eligible_games     = 0
 
     for game in games:
         game_id       = game.get("game_id", "")
@@ -132,6 +133,12 @@ def push_today(debug: bool = False):
 
             result = pe.run_full_prediction(game_data)
 
+            # 模型主動拒絕（prediction_engine 尚未實作時固定為 False）
+            if result.get("reject", False):
+                model_reject_count += 1
+                logger.info("[main] model_reject game_id=%s", game_id)
+                continue
+
             ok = _push_pre_game(game, result)
             if ok:
                 dm.mark_pushed(game_id, sim_result={**result,
@@ -143,11 +150,12 @@ def push_today(debug: bool = False):
                 dm.append_pre_game_row(_build_csv_row(game, result))
                 pushed_count += 1
             else:
-                model_reject += 1
+                send_fail_count += 1
+                logger.warning("[main] send_fail game_id=%s", game_id)
 
         except Exception as exc:
             logger.warning("[main] push_today game_id=%s 失敗: %s", game_id, exc)
-            model_reject += 1
+            send_fail_count += 1
             if debug:
                 nt.push_raw(f"[DEBUG] game_id={game_id} exception: {exc}", silent=True)
 
@@ -156,28 +164,21 @@ def push_today(debug: bool = False):
         except Exception as exc: logger.warning("[main] worldcup_engine 失敗: %s", exc)
 
     if pushed_count == 0:
-        logger.info("[main] decision report total=%d tw=%d silent=%d dup=%d reject=%d eligible=%d pushed=0",
+        logger.info("[main] decision total=%d tw=%d silent=%d dup=%d model_reject=%d send_fail=%d eligible=%d",
                     len(games), time_window_block, silent_hours_block,
-                    duplicate_block, model_reject, eligible_games)
+                    duplicate_block, model_reject_count, send_fail_count, eligible_games)
         sep = "\u2501" * 14
-        msg = "\n".join([
-            "\u2699\ufe0f \u63a8\u64ad\u6c7a\u7b56\u5831\u544a",
-            sep,
-            "",
-            "\U0001f4cb \u7e3d\u8cfd\u4e8b\uff1a" + str(len(games)),
-            "",
-            "\u26d4 \u6642\u9593\u7a97\u963b\u64cb\uff1a" + str(time_window_block),
-            "\u26d4 \u975c\u9ed8\u6642\u6bb5\uff1a" + str(silent_hours_block),
-            "\u26d4 \u5df2\u63a8\u64ad\u904e\uff1a" + str(duplicate_block),
-            "\u26d4 \u6a21\u578b\u62d2\u7d55\uff1a" + str(model_reject),
-            "",
-            "\u2705 \u53ef\u9032\u5165\u6a21\u578b\uff1a" + str(eligible_games),
-            "\U0001f4e1 \u6700\u7d42\u63a8\u64ad\uff1a0",
-            "",
-            sep,
-            "\u2139\ufe0f \u672c\u8f2a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6",
-        ])
-        nt.push_raw(msg, silent=True)
+        parts = ["\u2699\ufe0f \u63a8\u64ad\u6c7a\u7b56\u5831\u544a", sep, "",
+                 "\U0001f4cb \u7e3d\u8cfd\u4e8b\uff1a" + str(len(games)), "",
+                 "\u26d4 \u6642\u9593\u7a97\u963b\u64cb\uff1a" + str(time_window_block),
+                 "\u26d4 \u975c\u9ed8\u6642\u6bb5\uff1a" + str(silent_hours_block),
+                 "\u26d4 \u5df2\u63a8\u64ad\u904e\uff1a" + str(duplicate_block),
+                 "\u26d4 \u6a21\u578b\u62d2\u7d55\uff1a" + str(model_reject_count),
+                 "\u274c \u63a8\u64ad\u5931\u6557\uff1a" + str(send_fail_count), "",
+                 "\u2705 \u53ef\u9032\u5165\u6a21\u578b\uff1a" + str(eligible_games),
+                 "\U0001f4e1 \u6700\u7d42\u63a8\u64ad\uff1a0", "",
+                 sep, "\u2139\ufe0f \u672c\u8f2a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6"]
+        nt.push_raw("\n".join(parts), silent=True)
 
     dm.git_commit_state()
 
