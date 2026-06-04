@@ -238,7 +238,6 @@ def _push_post_game(item: dict) -> bool:
         # EV / Edge / Kelly 模型表現評估
         ev_accuracy  = "✔ 正向" if float(sim.get("home_win_pct",50)) > 50 and verify["moneyline_hit"] else                        "✔ 符合預期" if verify["moneyline_hit"] else "✘ 本場偏差"
         edge_hit     = "✔ 有效" if value_edge > 0 and verify["moneyline_hit"] else                        "✔ 無Value場次" if value_edge <= 0 else "✘ Edge未命中"
-        kelly_result = "✔ 合理" if float(sim.get("kelly_pct",0)) > 0 else "- 本場無建議"
 
         from notifier import _market_bias_label
         v = verify; ve = value_edge
@@ -250,7 +249,7 @@ def _push_post_game(item: dict) -> bool:
             "exact_hit":     "✅" if v["exact_hit"]     else "❌",
             "spread_hit":    "✅" if v["spread_hit"]    else "❌",
             "ou_hit":        "✅" if v["ou_hit"]        else "❌",
-            "ev_accuracy": ev_accuracy, "edge_hit": edge_hit, "kelly_result": kelly_result,
+            "ev_accuracy": ev_accuracy, "edge_hit": edge_hit,
             "value_team": value_team or game.get("home_team",""),
             "value_edge": f"+{ve:.1f}" if ve >= 0 else f"{ve:.1f}",
             "market_bias": _market_bias_label(ve), "pred_mode": "量化分析",
