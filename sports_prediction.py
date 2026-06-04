@@ -98,6 +98,11 @@ def push_today(debug: bool = False):
     """
     games = _get_games()
     pushed_count = 0
+    skip_stats = {}
+
+    def _skip(reason, gid=""):
+        skip_stats[reason] = skip_stats.get(reason, 0) + 1
+        logger.info("[main] skip game_id=%s reason=%s", gid, reason)
 
     for game in games:
         game_id       = game.get("game_id", "")
@@ -107,13 +112,18 @@ def push_today(debug: bool = False):
             # ── 推播視窗判斷 ──────────────────────────────
             in_window = rv.in_push_window(game_time_utc, game.get('game_time',''))
             if not in_window and not debug:
+                _skip("out_of_time_window", game_id)
                 continue
 
             if dm.get_flag(game_id).get("pre_pushed") and not dm.is_post_pushed(game_id):
                 [(_push_post_game(i), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
                 continue
-            if rv.is_silent_hours() and not debug: continue
-            if dm.is_pushed_today(game_id) and not debug: continue
+            if rv.is_silent_hours() and not debug:
+                _skip("silent_hours", game_id)
+                continue
+            if dm.is_pushed_today(game_id) and not debug:
+                _skip("already_pushed", game_id)
+                continue
 
             # 組裝 game_data
             game_data = _build_game_data(game)
@@ -149,11 +159,16 @@ def push_today(debug: bool = False):
         except Exception as exc: logger.warning("[main] worldcup_engine 失敗: %s", exc)
 
     if pushed_count == 0:
-        lines = ["\u2699\ufe0f \u7cfb\u7d71\u5fc3\u8df3",
-                 "\U0001f4cb \u76e3\u63a7\u8cfd\u4e8b\uff1a" + str(len(games)) + " \u5834",
-                 "\U0001f4e1 \u672c\u8f2a\u63a8\u64ad\uff1a0 \u5834",
-                 "\u2139\ufe0f \u539f\u56e0\uff1a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6"]
-        nt.push_raw("\n".join(lines), silent=True)
+        logger.info("[main] skip_stats=%s", skip_stats)
+        base = ["\u2699\ufe0f \u7cfb\u7d71\u5fc3\u8df3",
+                "\U0001f4cb \u76e3\u63a7\u8cfd\u4e8b\uff1a" + str(len(games)) + " \u5834",
+                "\U0001f4e1 \u672c\u8f2a\u63a8\u64ad\uff1a0 \u5834",
+                "\u2139\ufe0f \u539f\u56e0\uff1a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6"]
+        if skip_stats:
+            base.append("")
+            base.append("\U0001f4ca \u63a8\u64ad\u8df3\u904e\u539f\u56e0\u7d71\u8a08")
+            base += ["  " + k + "\uff1a" + str(v) + " \u5834" for k, v in skip_stats.items()]
+        nt.push_raw("\n".join(base), silent=True)
 
     dm.git_commit_state()
 
