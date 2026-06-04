@@ -141,17 +141,19 @@ def push_today(debug: bool = False):
 
         except Exception as exc:
             logger.warning("[main] push_today game_id=%s 失敗: %s", game_id, exc)
+            if debug:
+                nt.push_raw(f"[DEBUG] game_id={game_id} exception: {exc}", silent=True)
 
     if _HAS_WC_ENGINE:
         try: pushed_count += wce.check_and_push()
         except Exception as exc: logger.warning("[main] worldcup_engine 失敗: %s", exc)
 
     if pushed_count == 0:
-        nt.push_standby(
-            game_count=len(games),
-            reason="本輪無符合推播視窗之賽事",
-            silent=True,
-        )
+        lines = ["\u2699\ufe0f \u7cfb\u7d71\u5fc3\u8df3",
+                 "\U0001f4cb \u76e3\u63a7\u8cfd\u4e8b\uff1a" + str(len(games)) + " \u5834",
+                 "\U0001f4e1 \u672c\u8f2a\u63a8\u64ad\uff1a0 \u5834",
+                 "\u2139\ufe0f \u539f\u56e0\uff1a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6"]
+        nt.push_raw("\n".join(lines), silent=True)
 
     dm.git_commit_state()
 
