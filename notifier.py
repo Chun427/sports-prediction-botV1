@@ -6,7 +6,6 @@ import os
 import logging
 import time
 import requests
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,30 +22,24 @@ REQUEST_TIMEOUT = 15
 # ══════════════════════════════════════════════════════════
 def _send(text: str, silent: bool = False) -> bool:
     if not TG_TOKEN or not TG_CHAT:
-        logger.error("[notifier] TG_TOKEN 或 TG_CHAT 未設定，無法推播")
+        logger.error("[notifier] TG_TOKEN 或 TG_CHAT 未設定")
         return False
-
     url     = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
     payload = {
-        "chat_id":                  TG_CHAT,
-        "text":                     text,
-        "parse_mode":               "HTML",
-        "disable_notification":     silent,
+        "chat_id": TG_CHAT, "text": text,
+        "parse_mode": "HTML", "disable_notification": silent,
         "disable_web_page_preview": True,
     }
-
     for attempt in range(1, RETRY_COUNT + 1):
         try:
             resp = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
             if resp.status_code == 200:
                 return True
-            logger.warning("[notifier] 推播失敗 attempt=%d status=%d body=%s",
-                           attempt, resp.status_code, resp.text[:200])
+            logger.warning("[notifier] 推播失敗 attempt=%d status=%d", attempt, resp.status_code)
         except requests.RequestException as exc:
             logger.warning("[notifier] 推播例外 attempt=%d: %s", attempt, exc)
         if attempt < RETRY_COUNT:
             time.sleep(RETRY_DELAY)
-
     logger.error("[notifier] 推播最終失敗（已重試 %d 次）", RETRY_COUNT)
     return False
 
@@ -55,58 +48,82 @@ def _send(text: str, silent: bool = False) -> bool:
 #  ❗ 格式常數區（禁止修改結構，只能改佔位符）
 # ══════════════════════════════════════════════════════════
 
-# ── 賽前預測（新版格式）─────────────────────────────────
 _PRE_GAME_TMPL = """\
 🎯 精算師預測系統
-⚡ 終極鎖定盤口（賽前 30 分鐘）
+⚡ 量化預測模型（賽前 30 分鐘）
+
 ━━━━━━━━━━━━━━━━
 📅 台灣時間 {date}
 {sport_emoji} {league}
 {home} 🆚 {away}
 ━━━━━━━━━━━━━━━━
-🎲 1,000,000 次蒙特卡羅模擬
-📊 參考莊家數：{bookmaker_count} 家｜抽水：{vig_pct}%
-🗃️ 數據來源：{data_source}
-⚙️ 預測模式：{pred_mode}
-🎯 信心指數：{confidence}
-{value_line}
-━━━━━━━━━━━━━━━━
-📐 去Vig真實勝率
-{home_short} {vig_bar_home} {vig_home_pct}%
-{away_short} {vig_bar_away} {vig_away_pct}%
 
-🎲 蒙特卡羅模擬勝率
-{home_short} {mc_bar_home} {mc_home_pct}%
-{away_short} {mc_bar_away} {mc_away_pct}%
-━━━━━━━━━━━━━━━━
+📐 去Vig真實勝率
+{home} {vig_bar_home} {vig_home_pct}%
+{away} {vig_bar_away} {vig_away_pct}%
+
+蒙特卡羅模擬勝率
+{home} {mc_bar_home} {mc_home_pct}%
+{away} {mc_bar_away} {mc_away_pct}%
+
 📈 Value分析
-{home_short} 優勢：{home_edge}%｜{away_short} 優勢：{away_edge}%
+{home} 優勢：{home_edge}%
+{away} 優勢：{away_edge}%
+
 ━━━━━━━━━━━━━━━━
 🏆 最可能出現的比分
 {score_top5}
+
 ━━━━━━━━━━━━━━━━
 📊 盤口深度分析
-讓分盤口 {spread_display}
-總分大小 {total_line}（{ou_direction}）
-獨贏賠率 {home_short}:{home_odds_display}｜{away_short}:{away_odds_display}
+讓分盤口     {spread_display}
+總分大小     {total_line}（{ou_direction}）
+獨贏賠率     {home}:{home_odds_display}｜{away}:{away_odds_display}
+
 ━━━━━━━━━━━━━━━━
 💰 台灣運彩實戰建議
 {betting_advice}
-━━━━━━━━━━━━━━━━
-⚠️ 數據分析，請理性投注。"""
 
-# ── 賽後驗證報告 ─────────────────────────────────────────
+━━━━━━━━━━━━━━━━
+📊 風控資訊
+- Kelly：{kelly_raw}
+- 建議下注比例：{kelly_pct}%
+
+━━━━━━━━━━━━━━━━
+📡 數據來源：{data_source}
+
+⚠️ 請理性投注。"""
+
 _POST_GAME_TMPL = """\
-📊 預測驗證報告 {date}
-🎯 今日命中率：{hit}/{total}（{hit_pct}%）
-⚙️ 預測模式：{pred_mode}
-━━━━━━━━━━━━━━━━
-獨贏盤      {moneyline_result}   {moneyline_hit}
-精準比分    {exact_score}         {exact_hit}
-讓分盤      {spread_result}        {spread_hit}
-總分大小    {ou_result}           {ou_hit}"""
+📊 賽後結果
+📅 台灣時間 {date}
 
-# ── 系統自學指標 ─────────────────────────────────────────
+{sport_emoji} {home} vs {away}
+
+━━━━━━━━━━━━━━━
+命中結果：{hit} / {total}（{hit_pct}%）
+━━━━━━━━━━━━━━━
+
+獨贏：{moneyline_hit}
+精準比分：{exact_hit}
+讓分：{spread_hit}
+大小分：{ou_hit}
+
+────────────────
+
+📊 模型表現
+- EV預測準確性：{ev_accuracy}
+- Edge命中：{edge_hit}
+- Kelly策略：{kelly_result}
+
+📊 模型 vs 市場
+模型優勢：{value_team} {value_edge}%
+市場偏差：{market_bias}
+
+────────────────
+
+📌 預測模式：{pred_mode}"""
+
 _METRICS_TMPL = """\
 📈 系統自學指標（{sample_count} 場樣本）
 ━━━━━━━━━━━━━━━━
@@ -120,7 +137,6 @@ Edge偏差：{edge_bias}%（+偏高估，-偏低估）
 ━━━━━━━━━━━━━━━━
 ⚠️ 數據分析，請理性投注。"""
 
-# ── 週報摘要 ─────────────────────────────────────────────
 _WEEKLY_TMPL = """\
 📅 本週預測週報 {week_range}
 ━━━━━━━━━━━━━━━━
@@ -134,7 +150,6 @@ _WEEKLY_TMPL = """\
 ━━━━━━━━━━━━━━━━
 ⚠️ 數據分析，請理性投注。"""
 
-# ── 世界盃特報 ───────────────────────────────────────────
 _WC_TMPL = """\
 🏆 世界盃特報
 ━━━━━━━━━━━━━━━━
@@ -153,7 +168,6 @@ _WC_TMPL = """\
 ⚙️ 計算模式：{calc_mode}
 ⚠️ 數據分析，請理性投注。"""
 
-# ── 系統待機通知（靜音）─────────────────────────────────
 _STANDBY_TMPL = """\
 ⚙️ 系統執行完畢｜{datetime}
 📋 監控賽事：{game_count} 場
@@ -165,14 +179,11 @@ _STANDBY_TMPL = """\
 # ══════════════════════════════════════════════════════════
 
 def fmt_bar(pct: float, width: int = 10) -> str:
-    """產生進度條：█ 填滿部分，░ 空白部分。"""
-    filled = round(pct / 100 * width)
-    filled = max(0, min(width, filled))
+    filled = max(0, min(width, round(pct / 100 * width)))
     return "█" * filled + "░" * (width - filled)
 
 
 def _shorten(name: str, max_len: int = 18) -> str:
-    """全名優先；超過 max_len 字元自動取最後一個單詞（官方簡稱）。"""
     if len(name) <= max_len:
         return name
     parts = name.strip().split()
@@ -180,11 +191,6 @@ def _shorten(name: str, max_len: int = 18) -> str:
 
 
 def fmt_score_top5(scores: list) -> str:
-    """
-    scores = [(home, away, pct) 或 (home, away, pct, home_name, away_name)]
-    格式：🥇 Los Angeles Angels 5–3 Colorado Rockies（3.2%）
-    隊名超過 18 字元自動縮為官方簡稱。
-    """
     medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
     lines  = []
     for i, item in enumerate(scores[:5]):
@@ -194,98 +200,82 @@ def fmt_score_top5(scores: list) -> str:
         else:
             h, a, p = item[0], item[1], item[2]
             h_name, a_name = "", ""
-
         hn = _shorten(h_name) if h_name else ""
         an = _shorten(a_name) if a_name else ""
-
         if h == a:
             score_str = f"和局 {h}–{a}"
         elif hn and an:
             score_str = f"{hn} {h}–{a} {an}" if h > a else f"{an} {a}–{h} {hn}"
         else:
             score_str = f"{h}–{a}"
-
         lines.append(f"{medal} {score_str}（{p:.1f}%）")
-
     return "\n".join(lines) if lines else "  資料不足"
 
 
 def fmt_betting_advice(
-    home_name: str,
-    away_name: str,
-    mc_home_pct: float,
-    mc_away_pct: float,
-    spread_line: float,
-    total_line: float,
-    over_pct: float,
-    kelly_pct: float,
-    has_value: bool,
-    value_team: str,
-    home_edge: float = 0.0,
-    away_edge: float = 0.0,
+    home_name: str, away_name: str,
+    mc_home_pct: float, mc_away_pct: float,
+    spread_line: float, total_line: float,
+    over_pct: float, kelly_pct: float,
+    has_value: bool, value_team: str,
+    home_edge: float = 0.0, away_edge: float = 0.0,
 ) -> str:
-    """
-    動態產生台灣運彩實戰建議（三層：主推 / 次要 / 備選）。
-    排序依據：各盤口實際 Edge（優勢）由大到小。
-    Edge 最大 = 🔮主推 / 第二 = 💎次要 / 第三 = ⭐備選
-    """
     candidates = []
 
-    # ── 獨贏 Edge：取主客較大的那側 ──
+    # 獨贏
     if mc_home_pct >= mc_away_pct:
-        ml_team, ml_label = home_name, "選 [主隊勝]"
-        ml_edge = home_edge
+        ml_team, ml_label, ml_edge = home_name, "選 [主隊勝]", home_edge
     else:
-        ml_team, ml_label = away_name, "選 [客隊勝]"
-        ml_edge = away_edge
-    kelly_note = f"💡 Kelly建議：{kelly_pct}% 資金" if kelly_pct > 0 else ""
+        ml_team, ml_label, ml_edge = away_name, "選 [客隊勝]", away_edge
     candidates.append({
-        "edge":   ml_edge,
-        "desc":   f"獨贏盤 → {ml_team} 勝出",
-        "detail": f"› 劃位：{ml_label}\n› {kelly_note}" if kelly_note else f"› 劃位：{ml_label}",
+        "edge": ml_edge,
+        "line": f"🔮【主推】獨贏盤 → {ml_team} 勝出",
     })
 
-    # ── 大小分 Edge：over/under 偏離 50% 的程度 ──
+    # 大小分
     under_pct = 100 - over_pct
     if over_pct >= under_pct:
-        ou_edge, ou_desc = over_pct - 50, f"總分大小 → 大分({total_line})"
-        ou_label = f"選 [大分] {total_line}"
+        ou_edge = over_pct - 50
+        ou_line = f"💎【次要】總分大小 → 大分({total_line})"
     else:
-        ou_edge, ou_desc = under_pct - 50, f"總分大小 → 小分({total_line})"
-        ou_label = f"選 [小分] {total_line}"
-    candidates.append({
-        "edge":   round(ou_edge, 1),
-        "desc":   ou_desc,
-        "detail": f"› 劃位：{ou_label}",
-    })
+        ou_edge = under_pct - 50
+        ou_line = f"💎【次要】總分大小 → 小分({total_line})"
+    candidates.append({"edge": round(ou_edge, 1), "line": ou_line})
 
-    # ── 讓分 Edge：MC 覆蓋率偏離 50% 的程度 ──
+    # 讓分
     if spread_line and spread_line != 0:
         if mc_home_pct > 50:
-            sp_team  = home_name
-            sp_line  = spread_line
-            sp_label = "選 [主隊讓球]" if sp_line < 0 else "選 [主隊受讓]"
-            sp_edge  = mc_home_pct - 50
+            sp_team = home_name
+            sp_sign = f"{spread_line:+.1f}"
+            sp_edge = mc_home_pct - 50
         else:
-            sp_team  = away_name
-            sp_line  = -spread_line
-            sp_label = "選 [客隊讓球]" if sp_line < 0 else "選 [客隊受讓]"
-            sp_edge  = mc_away_pct - 50
-        sp_sign = f"{sp_line:+.1f}"
+            sp_team = away_name
+            sp_sign = f"{-spread_line:+.1f}"
+            sp_edge = mc_away_pct - 50
         candidates.append({
-            "edge":   round(sp_edge, 1),
-            "desc":   f"讓分盤 → {sp_team}({sp_sign})",
-            "detail": f"› 劃位：{sp_label}",
+            "edge": round(sp_edge, 1),
+            "line": f"⭐【備選】讓分盤 → {sp_team}({sp_sign})",
         })
 
-    # ── 依 Edge 由大到小排序 ──
+    # 依 Edge 排序，重新分配圖示
     candidates.sort(key=lambda x: -x["edge"])
     icons = ["🔮【主推】", "💎【次要】", "⭐【備選】"]
     lines = []
     for i, c in enumerate(candidates[:3]):
-        lines.append(f"{icons[i]}\n{c['desc']}\n{c['detail']}\n› Edge：+{c['edge']:.1f}%")
+        # 替換圖示
+        raw = c["line"]
+        for old_icon in ["🔮【主推】", "💎【次要】", "⭐【備選】"]:
+            raw = raw.replace(old_icon, "")
+        lines.append(f"{icons[i]}{raw.strip()}")
+    return "\n".join(lines)
 
-    return "\n\n".join(lines)
+
+def _fmt_odds_display(odds: float) -> str:
+    if not odds or odds <= 0:
+        return "N/A"
+    if odds >= 2.0:
+        return f"+{round((odds - 1) * 100)}"
+    return str(round(-100 / (odds - 1)))
 
 
 def fmt_sport_breakdown(breakdown: dict) -> str:
@@ -297,14 +287,14 @@ def fmt_sport_breakdown(breakdown: dict) -> str:
     return "\n".join(lines) if lines else "  暫無數據"
 
 
-def _fmt_odds_display(odds: float) -> str:
-    """賠率轉為美式顯示（>2.0 → 正數，<2.0 → 負數）。"""
-    if not odds or odds <= 0:
-        return "N/A"
-    if odds >= 2.0:
-        return f"+{round((odds - 1) * 100)}"
-    else:
-        return str(round(-100 / (odds - 1)))
+def _market_bias_label(value_edge: float) -> str:
+    if abs(value_edge) < 2:
+        return "市場定價合理"
+    if value_edge > 0:
+        strength = "嚴重" if value_edge > 8 else "中度"
+        return f"{strength}低估 {value_edge:.1f}%"
+    strength = "嚴重" if value_edge < -8 else "中度"
+    return f"{strength}高估 {abs(value_edge):.1f}%"
 
 
 # ══════════════════════════════════════════════════════════
@@ -312,44 +302,34 @@ def _fmt_odds_display(odds: float) -> str:
 # ══════════════════════════════════════════════════════════
 
 def push_pre_game(data: dict) -> bool:
-    # value_line
-    if data.get("has_value"):
-        data["value_line"] = (
-            f"💎 Value Bet！{data.get('value_team','')} "
-            f"優勢 +{data.get('value_edge','')}%"
-        )
-    else:
-        data["value_line"] = ""
-
-    # 信心指數加百分比（若尚未包含 % 數字，自動附加）
-    conf = data.get("confidence", "🔴 低")
+    # 信心指數加百分比
+    conf     = data.get("confidence", "🔴 低")
     conf_pct = data.get("confidence_pct")
     if conf_pct and "%" not in conf:
         data["confidence"] = f"{conf}（{conf_pct}%）"
 
     # 進度條
-    vig_home = float(data.get("vig_home_pct", 50))
-    vig_away = float(data.get("vig_away_pct", 50))
-    mc_home  = float(data.get("mc_home_pct",  50))
-    mc_away  = float(data.get("mc_away_pct",  50))
-    data["vig_bar_home"] = fmt_bar(vig_home)
-    data["vig_bar_away"] = fmt_bar(vig_away)
-    data["mc_bar_home"]  = fmt_bar(mc_home)
-    data["mc_bar_away"]  = fmt_bar(mc_away)
+    data["vig_bar_home"] = fmt_bar(float(data.get("vig_home_pct", 50)))
+    data["vig_bar_away"] = fmt_bar(float(data.get("vig_away_pct", 50)))
+    data["mc_bar_home"]  = fmt_bar(float(data.get("mc_home_pct",  50)))
+    data["mc_bar_away"]  = fmt_bar(float(data.get("mc_away_pct",  50)))
 
     # 大小分方向
     data["ou_direction"] = "大分 🔼" if float(data.get("over_pct", 50)) >= 50 else "小分 🔽"
 
-    # 賠率美式顯示
+    # 賠率顯示
     data["home_odds_display"] = _fmt_odds_display(data.get("home_odds_raw"))
     data["away_odds_display"] = _fmt_odds_display(data.get("away_odds_raw"))
 
     # 讓分顯示
     spread = data.get("spread_line_val", 0)
-    if spread and spread != 0:
-        data["spread_display"] = f"{data.get('home_short','')} {spread:+.1f}"
-    else:
-        data["spread_display"] = "暫無資料"
+    data["spread_display"] = (
+        f"{data.get('away','')} {spread:+.1f}" if spread and spread != 0 else "暫無資料"
+    )
+
+    # Kelly 原始值（kelly_raw = kelly_pct / 100）
+    kp = float(data.get("kelly_pct", 0))
+    data["kelly_raw"] = round(kp / 100, 2)
 
     try:
         msg = _PRE_GAME_TMPL.format(**data)
