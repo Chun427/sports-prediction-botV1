@@ -66,9 +66,10 @@ _PRE_GAME_TMPL = """\
 {home} {mc_bar_home} {mc_home_pct}%
 {away} {mc_bar_away} {mc_away_pct}%
 
-📈 Value分析
-{home} 優勢：{home_edge}%
-{away} 優勢：{away_edge}%
+━━━━━━━━━━━━━━━━
+📊 Edge（模型優勢）
+{home} {home_edge_fmt}%
+{away} {away_edge_fmt}%
 
 ━━━━━━━━━━━━━━━━
 🏆 最可能出現的比分
@@ -86,12 +87,11 @@ _PRE_GAME_TMPL = """\
 
 ━━━━━━━━━━━━━━━━
 📊 風控資訊
-- Kelly：{kelly_raw}
-- 建議下注比例：{kelly_pct}%
+- Kelly：{kelly_pct}%
+- Risk Level：{risk_level}
 
 ━━━━━━━━━━━━━━━━
 📡 數據來源：{data_source}
-
 ⚠️ 請理性投注。"""
 
 _POST_GAME_TMPL = """\
@@ -114,7 +114,6 @@ _POST_GAME_TMPL = """\
 📊 模型表現
 - EV預測準確性：{ev_accuracy}
 - Edge命中：{edge_hit}
-- Kelly策略：{kelly_result}
 
 📊 模型 vs 市場
 模型優勢：{value_team} {value_edge}%
@@ -327,9 +326,15 @@ def push_pre_game(data: dict) -> bool:
         f"{data.get('away','')} {spread:+.1f}" if spread and spread != 0 else "暫無資料"
     )
 
-    # Kelly 原始值（kelly_raw = kelly_pct / 100）
+    # Edge 格式化（帶正負號）
+    home_edge = float(data.get("home_edge", 0))
+    away_edge = float(data.get("away_edge", 0))
+    data["home_edge_fmt"] = f"+{home_edge:.1f}" if home_edge >= 0 else f"{home_edge:.1f}"
+    data["away_edge_fmt"] = f"+{away_edge:.1f}" if away_edge >= 0 else f"{away_edge:.1f}"
+
+    # Risk Level（依 Kelly % 判斷）
     kp = float(data.get("kelly_pct", 0))
-    data["kelly_raw"] = round(kp / 100, 2)
+    data["risk_level"] = "低" if kp < 2 else ("高" if kp > 5 else "中")
 
     try:
         msg = _PRE_GAME_TMPL.format(**data)
