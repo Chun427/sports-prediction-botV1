@@ -74,6 +74,10 @@ def _save_json(path: Path, data: Any) -> bool:
 # ══════════════════════════════════════════════════════════
 
 def load_flags() -> dict:
+    """讀取 flags.json；不存在時自動建立空 {}，防止 cache restore 失敗導致崩潰。"""
+    if not FLAGS_FILE.exists():
+        logger.info("[data_manager] flags.json 不存在，自動初始化")
+        _save_json(FLAGS_FILE, {})
     return _load_json(FLAGS_FILE, {})
 
 
