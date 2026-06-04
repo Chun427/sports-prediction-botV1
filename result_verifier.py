@@ -115,9 +115,8 @@ def _empty_verify() -> dict:
 def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
     推播視窗（統一 Asia/Taipei）：
-      主窗口：開賽前 30 分鐘 ～ 3 小時（preferred）
-      備用窗口：開賽前 3 ～ 6 小時（fallback）
-    任一符合即推播。game_time_utc 解析失敗時 fallback 用 game_time_tw。
+      開賽前 30 分鐘 ～ 3 小時（0.5h ~ 3.0h）
+    game_time_utc 解析失敗時 fallback 用 game_time_tw。
     """
     now_tw  = datetime.now(TW)
     game_dt = _parse_utc_to_tw(game_time_utc)
@@ -127,14 +126,12 @@ def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
         logger.warning("[verifier] in_push_window 無法解析 utc=%s tw=%s",
                        game_time_utc, game_time_tw)
         return False
-    diff_h    = (game_dt - now_tw).total_seconds() / 3600
-    preferred = 0.5 <= diff_h <= 3.0
-    fallback  = 3.0 < diff_h <= 6.0
-    if preferred or fallback:
-        zone = "主窗口" if preferred else "備用窗口"
-        logger.info("[verifier] %s 符合%s（距開賽%.1fh）",
-                    game_time_tw or game_time_utc, zone, diff_h)
-    return preferred or fallback
+    diff_h = (game_dt - now_tw).total_seconds() / 3600
+    in_win = 0.5 <= diff_h <= 3.0
+    if in_win:
+        logger.info("[verifier] %s 符合推播窗口（距開賽 %.1fh）",
+                    game_time_tw or game_time_utc, diff_h)
+    return in_win
 
 
 def _parse_utc_to_tw(utc_str: str):
