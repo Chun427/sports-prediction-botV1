@@ -54,9 +54,7 @@ except ImportError:
     _HAS_TOURNAMENT = False
     logger.warning("tournament_engine 未找到，世界盃功能停用")
 
-# ══════════════════════════════════════════════════════════
 #  賽事快取管理
-# ══════════════════════════════════════════════════════════
 
 def _get_games(force_refresh: bool = False) -> list[dict]:
     """
@@ -82,9 +80,7 @@ def _get_games(force_refresh: bool = False) -> list[dict]:
 
     return games
 
-# ══════════════════════════════════════════════════════════
 #  push_today（核心流程）
-# ══════════════════════════════════════════════════════════
 
 def push_today(debug: bool = False):
     """
@@ -151,7 +147,6 @@ def push_today(debug: bool = False):
         except Exception as exc:
             logger.warning("[main] push_today game_id=%s 失敗: %s", game_id, exc)
 
-    # ── 無推播條件 → standby ─────────────────────────────
     if pushed_count == 0:
         nt.push_standby(
             game_count=len(games),
@@ -159,43 +154,72 @@ def push_today(debug: bool = False):
             silent=True,
         )
 
-    # ── 提交狀態 ─────────────────────────────────────────
     dm.git_commit_state()
 
-# ══════════════════════════════════════════════════════════
 #  推播輔助（格式組裝 → notifier）
-# ══════════════════════════════════════════════════════════
 
 def _push_pre_game(game: dict, result: dict) -> bool:
-    from notifier import fmt_score_top5
+    from notifier import fmt_score_top5, fmt_betting_advice
     try:
+        vig     = game.get("vig_result", {})
+        h2h     = game.get("h2h_odds", {})
+        spread  = game.get("spread", {})
+        totals  = game.get("totals", {})
+
+        home_name  = game.get("home_team", "")
+        away_name  = game.get("away_team", "")
+        home_short = game.get("home_short", "")
+        away_short = game.get("away_short", "")
+
+        # 去 Vig 勝率（市場）
+        vig_home_pct = round(float(vig.get("home_prob", 0.5)) * 100, 1)
+        vig_away_pct = round(float(vig.get("away_prob", 0.5)) * 100, 1)
+
+        # MC 模擬勝率（模型）
+        mc_home_pct = float(result.get("home_win_pct", 50))
+        mc_away_pct = float(result.get("away_win_pct", 50))
+
+        # 讓分 / 大小分
+        spread_val = float(spread.get("line") or 0)
+        total_line = float(totals.get("line") or result.get("total_line", 0))
+        over_pct   = float(result.get("over_pct", 50))
+        kelly_pct  = float(result.get("kelly_pct", 0))
+
+        # Top5 比分（帶隊名）
+        top5_raw = result.get("top5_scores", [])
+        top5_with_names = [
+            (h, a, p, home_name, away_name) for h, a, p in top5_raw
+        ]
+
+        # 台灣運彩實戰建議（動態）
+        betting_advice = fmt_betting_advice(
+            home_name=home_name, away_name=away_name,
+            mc_home_pct=mc_home_pct, mc_away_pct=mc_away_pct,
+            spread_line=spread_val, total_line=total_line, over_pct=over_pct,
+            kelly_pct=kelly_pct, has_value=result.get("has_value",False),
+            value_team=result.get("value_team",""),
+            home_edge=float(result.get("home_edge",0)),
+            away_edge=float(result.get("away_edge",0)),
+        )
+
+        g = game; r = result
         data = {
-            "date":            game.get("game_time", ""),
-            "sport_emoji":     game.get("sport_emoji", "🏆"),
-            "league":          game.get("league", ""),
-            "home":            game.get("home_team", ""),
-            "away":            game.get("away_team", ""),
-            "home_short":      game.get("home_short", ""),
-            "away_short":      game.get("away_short", ""),
-            "bookmaker_count": game.get("bookmaker_count", 0),
-            "vig_pct":         game.get("vig_result", {}).get("vig_pct", 0),
-            "data_source":     _data_source_label(result),
-            "pred_mode":       result.get("pred_mode", "📐 規則模擬"),
-            "confidence":      result.get("confidence", "🔴 低"),
-            "has_value":       result.get("has_value", False),
-            "value_team":      _resolve_value_team(game, result),
-            "value_edge":      result.get("value_edge", 0),
-            "home_win_pct":    result.get("home_win_pct", 50),
-            "away_win_pct":    result.get("away_win_pct", 50),
-            "draw_pct":        result.get("draw_pct"),
-            "score_top5":      fmt_score_top5(result.get("top5_scores", [])),
-            "spread_line":     result.get("spread_line_txt", "暫無"),
-            "total_line":      result.get("total_line", 0),
-            "over_pct":        result.get("over_pct", 50),
-            "under_pct":       result.get("under_pct", 50),
-            "home_edge":       result.get("home_edge", 0),
-            "away_edge":       result.get("away_edge", 0),
-            "kelly_pct":       result.get("kelly_pct", 0),
+            "date": g.get("game_time",""), "sport_emoji": g.get("sport_emoji","🏆"),
+            "league": g.get("league",""), "home": home_name, "away": away_name,
+            "home_short": home_short, "away_short": away_short,
+            "bookmaker_count": g.get("bookmaker_count",0),
+            "vig_pct": round(float(vig.get("vig_pct",0)),1),
+            "data_source": _data_source_label(r), "pred_mode": r.get("pred_mode","📐 規則模擬"),
+            "confidence": r.get("confidence","🔴 低"),
+            "has_value": r.get("has_value",False), "value_team": _resolve_value_team(g,r),
+            "value_edge": r.get("value_edge",0),
+            "vig_home_pct": vig_home_pct, "vig_away_pct": vig_away_pct,
+            "mc_home_pct": mc_home_pct, "mc_away_pct": mc_away_pct,
+            "home_edge": r.get("home_edge",0), "away_edge": r.get("away_edge",0),
+            "score_top5": fmt_score_top5(top5_with_names),
+            "spread_line_val": spread_val, "total_line": total_line, "over_pct": over_pct,
+            "home_odds_raw": h2h.get("home"), "away_odds_raw": h2h.get("away"),
+            "betting_advice": betting_advice,
         }
         return nt.push_pre_game(data)
     except Exception as exc:
@@ -236,15 +260,17 @@ def _resolve_value_team(game: dict, result: dict) -> str:
         return game.get("away_short", game.get("away_team", ""))
     return ""
 
+def _confidence_pct(vig_result: dict) -> int:
+    diff = abs(float(vig_result.get("home_prob",0.5)) - float(vig_result.get("away_prob",0.5)))
+    return round(50+diff*100) if diff>0.25 else (round(40+diff*80) if diff>0.10 else round(30+diff*60))
+
 def _data_source_label(result: dict) -> str:
     mode = result.get("pred_mode", "")
     if "AI" in mode:
         return "AI模型+真實數據+賠率"
     return "規則模型+真實數據+賠率"
 
-# ══════════════════════════════════════════════════════════
 #  game_data 組裝（for prediction_engine）
-# ══════════════════════════════════════════════════════════
 
 def _build_game_data(game: dict) -> dict:
     """
@@ -316,9 +342,7 @@ def _build_csv_row(game: dict, result: dict) -> dict:
         "pred_mode": result.get("pred_mode",""),
     }
 
-# ══════════════════════════════════════════════════════════
 #  週報
-# ══════════════════════════════════════════════════════════
 
 def push_weekly_report():
     games = _get_games()
@@ -338,23 +362,12 @@ def push_weekly_report():
         if not verify:
             continue
 
-        for k, (hit_key, arr) in zip(
-            ["ml", "sp", "ou", "ex"],
-            [("moneyline_hit", stats["ml"]), ("spread_hit", stats["sp"]),
-             ("ou_hit", stats["ou"]), ("exact_hit", stats["ex"])],
-        ):
-            hit = int(verify.get(hit_key, 0))
-            arr[0] += hit
-            arr[1] += 1
-
-        lines.append(
-            f"{game.get('game_time','')[:5]} {game.get('home_short','')} vs "
-            f"{game.get('away_short','')}  "
-            f"{'✅' if verify.get('moneyline_hit') else '❌'}"
-            f"{'✅' if verify.get('spread_hit') else '❌'}"
-            f"{'✅' if verify.get('ou_hit') else '❌'}"
-            f"{'✅' if verify.get('exact_hit') else '❌'}"
-        )
+        for hk, arr in [("moneyline_hit",stats["ml"]),("spread_hit",stats["sp"]),("ou_hit",stats["ou"]),("exact_hit",stats["ex"])]:
+            arr[0]+=int(verify.get(hk,0)); arr[1]+=1
+        hs=game.get('home_short',''); aw=game.get('away_short',''); v=verify
+        lines.append(f"{game.get('game_time','')[:5]} {hs} vs {aw}  "
+            f"{'✅' if v.get('moneyline_hit') else '❌'}{'✅' if v.get('spread_hit') else '❌'}"
+            f"{'✅' if v.get('ou_hit') else '❌'}{'✅' if v.get('exact_hit') else '❌'}")
 
     def _pct(arr):
         return round(arr[0] / arr[1] * 100, 1) if arr[1] > 0 else 0
@@ -363,19 +376,15 @@ def push_weekly_report():
     week_start = (now - timedelta(days=6)).strftime("%m/%d")
     week_end   = now.strftime("%m/%d")
 
+    ml,sp,ou,ex = stats["ml"],stats["sp"],stats["ou"],stats["ex"]
     weekly_data = {
-        "week_range":      f"{week_start} ～ {week_end}",
-        "total_games":     len(games),
-        "verified_games":  stats["ml"][1],
-        "moneyline_hit":   stats["ml"][0], "moneyline_total": stats["ml"][1],
-        "moneyline_pct":   _pct(stats["ml"]),
-        "spread_hit":      stats["sp"][0], "spread_total": stats["sp"][1],
-        "spread_pct":      _pct(stats["sp"]),
-        "ou_hit":          stats["ou"][0], "ou_total": stats["ou"][1],
-        "ou_pct":          _pct(stats["ou"]),
-        "exact_hit":       stats["ex"][0], "exact_total": stats["ex"][1],
-        "exact_pct":       _pct(stats["ex"]),
-        "game_list":       "\n".join(lines) if lines else "本週無已驗證場次",
+        "week_range": f"{week_start} ～ {week_end}", "total_games": len(games),
+        "verified_games": ml[1],
+        "moneyline_hit": ml[0], "moneyline_total": ml[1], "moneyline_pct": _pct(ml),
+        "spread_hit": sp[0], "spread_total": sp[1], "spread_pct": _pct(sp),
+        "ou_hit": ou[0], "ou_total": ou[1], "ou_pct": _pct(ou),
+        "exact_hit": ex[0], "exact_total": ex[1], "exact_pct": _pct(ex),
+        "game_list": "\n".join(lines) if lines else "本週無已驗證場次",
     }
     nt.push_weekly(weekly_data)
 
@@ -395,9 +404,7 @@ def push_weekly_report():
 
     dm.git_commit_state()
 
-# ══════════════════════════════════════════════════════════
 #  世界盃特報
-# ══════════════════════════════════════════════════════════
 
 def push_world_cup():
     if not _HAS_TOURNAMENT:
@@ -420,9 +427,7 @@ def push_world_cup():
     except Exception as exc:
         logger.warning("[main] push_world_cup 失敗: %s", exc)
 
-# ══════════════════════════════════════════════════════════
 #  手動 metrics
-# ══════════════════════════════════════════════════════════
 
 def push_metrics_manual():
     metrics = dm.compute_and_save_metrics()
@@ -440,9 +445,7 @@ def push_metrics_manual():
         "sport_breakdown": fmt_sport_breakdown(metrics.get("sport_breakdown", {})),
     })
 
-# ══════════════════════════════════════════════════════════
 #  CLI 入口
-# ══════════════════════════════════════════════════════════
 
 def main():
     args = sys.argv[1:]
@@ -452,8 +455,7 @@ def main():
         push_today()
 
     elif cmd == "fetch":
-        _get_games(force_refresh=True)
-        logger.info("[main] fetch 完成")
+        _get_games(force_refresh=True); logger.info("[main] fetch 完成")
 
     elif cmd == "weekly":
         _get_games(force_refresh=True)
@@ -463,17 +465,13 @@ def main():
         push_world_cup()
 
     elif cmd == "results":
-        games      = _get_games()
-        post_items = rv.auto_results(games)
-        for item in post_items:
-            _push_post_game(item)
+        games = _get_games(); post_items = rv.auto_results(games)
+        [_push_post_game(i) for i in post_items]
         logger.info("[main] results 完成，共推播 %d 場", len(post_items))
 
     elif cmd == "verify_all":
-        games      = _get_games()
-        post_items = rv.verify_all(games)
-        for item in post_items:
-            _push_post_game(item)
+        games = _get_games(); post_items = rv.verify_all(games)
+        [_push_post_game(i) for i in post_items]
         logger.info("[main] verify_all 完成，共補漏 %d 場", len(post_items))
 
     elif cmd == "metrics":
