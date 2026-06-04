@@ -17,6 +17,48 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# 所有依賴模組皆 lazy import，缺失時靜默降級
+_dm  = None   # data_manager
+_rv  = None   # result_verifier
+_te  = None   # tournament_engine
+_nt  = None   # notifier
+_df  = None   # data_fetcher
+
+def _get_dm():
+    global _dm
+    if _dm is None:
+        try: import data_manager as m; _dm = m
+        except ImportError: pass
+    return _dm
+
+def _get_rv():
+    global _rv
+    if _rv is None:
+        try: import result_verifier as m; _rv = m
+        except ImportError: pass
+    return _rv
+
+def _get_te():
+    global _te
+    if _te is None:
+        try: import tournament_engine as m; _te = m
+        except ImportError: pass
+    return _te
+
+def _get_nt():
+    global _nt
+    if _nt is None:
+        try: import notifier as m; _nt = m
+        except ImportError: pass
+    return _nt
+
+def _get_df():
+    global _df
+    if _df is None:
+        try: import data_fetcher as m; _df = m
+        except ImportError: pass
+    return _df
+
 TW = timezone(timedelta(hours=8))
 
 BASE_DIR        = Path(__file__).parent
@@ -104,7 +146,7 @@ def increment_completed_count() -> int:
 def _get_wc_flags() -> dict:
     """從 data_manager 的 flags 中讀取 wc 專屬 flag。"""
     try:
-        import data_manager as dm
+        dm = _get_dm()
         flags = dm.load_flags()
         return flags.get(WC_FLAGS_KEY, {})
     except Exception as exc:
@@ -114,7 +156,7 @@ def _get_wc_flags() -> dict:
 
 def _set_wc_flag(key: str, value) -> bool:
     try:
-        import data_manager as dm
+        dm = _get_dm()
         flags = dm.load_flags()
         wc    = flags.get(WC_FLAGS_KEY, {})
         wc[key] = value
@@ -175,7 +217,7 @@ def get_pushable_games() -> list[dict]:
     直接呼叫 result_verifier.in_push_window。
     """
     try:
-        import result_verifier as rv
+        rv = _get_rv()
         import data_manager   as dm
     except ImportError as exc:
         logger.warning("[wc] 依賴模組缺失: %s", exc)
@@ -205,7 +247,7 @@ def build_award_data() -> Optional[dict]:
     """
     # 優先：tournament_engine
     try:
-        import tournament_engine as te
+        te = _get_te()
         awards = te.compute_award_probabilities()
         if awards.get("champion"):
             logger.info("[wc] 使用 tournament_engine 獎項資料")
@@ -217,7 +259,7 @@ def build_award_data() -> Optional[dict]:
 
     # Fallback：Odds API
     try:
-        import data_fetcher as df
+        df = _get_df()
         odds = df.fetch_odds("soccer_fifa_world_cup_winner", markets="h2h")
         if odds:
             from tournament_engine import _normalize_from_odds
@@ -263,33 +305,36 @@ def check_and_push() -> int:
     """
     每次 CI 執行時呼叫此函式。
     回傳推播次數（0 表示本輪無推播）。
-    缺少任何依賴時靜默跳過，不 crash。
+    任何 exception 絕對不影響 push_today()，全部 try/except 包覆。
     """
-    if not is_wc_active():
-        logger.debug("[wc] 非世界盃期間，跳過")
+    try:
+        if not is_wc_active():
+            return 0
+        pushed = 0
+        try:
+            if is_daily_push_hour() and not is_daily_pushed_today():
+                if has_upcoming_matches():
+                    _push_daily_awards()
+                    pushed += 1
+        except Exception as exc:
+            logger.warning("[wc] 每日推播失敗（繼續）: %s", exc)
+        try:
+            if should_trigger_deep_analysis():
+                _push_deep_analysis()
+                mark_deep_analysis_triggered()
+                pushed += 1
+        except Exception as exc:
+            logger.warning("[wc] 深度分析失敗（繼續）: %s", exc)
+        return pushed
+    except Exception as exc:
+        logger.warning("[wc] check_and_push 完全失敗（不影響主系統）: %s", exc)
         return 0
-
-    pushed = 0
-
-    # ── 每日 20:00 獎項推播 ──────────────────────────────
-    if is_daily_push_hour() and not is_daily_pushed_today():
-        if has_upcoming_matches():
-            _push_daily_awards()
-            pushed += 1
-
-    # ── 深度分析推播 ─────────────────────────────────────
-    if should_trigger_deep_analysis():
-        _push_deep_analysis()
-        mark_deep_analysis_triggered()
-        pushed += 1
-
-    return pushed
 
 
 def _push_daily_awards():
     """組裝並推播每日獎項特報。"""
     try:
-        import notifier as nt
+        nt = _get_nt()
         data = build_award_data()
         if not data:
             nt.push_raw("⚽ 世界盃獎項資料暫時無法取得，系統持續監控中", silent=True)
@@ -317,7 +362,7 @@ def _push_daily_awards():
 def _push_deep_analysis():
     """推播深度分析特報。"""
     try:
-        import notifier as nt
+        nt = _get_nt()
         data = build_deep_analysis_data()
         if not data:
             return
@@ -349,7 +394,7 @@ def _push_deep_analysis():
 def _parse_game_time(game: dict) -> Optional[datetime]:
     """從 game dict 解析開賽時間（TW aware datetime）。"""
     try:
-        import result_verifier as rv
+        rv = _get_rv()
         utc = game.get("game_time_utc", "")
         tw  = game.get("game_time", "")
         dt  = rv._parse_utc_to_tw(utc)
