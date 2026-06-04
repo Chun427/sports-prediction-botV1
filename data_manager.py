@@ -74,11 +74,37 @@ def _save_json(path: Path, data: Any) -> bool:
 # ══════════════════════════════════════════════════════════
 
 def load_flags() -> dict:
-    """讀取 flags.json；不存在時自動建立空 {}，防止 cache restore 失敗導致崩潰。"""
+    """
+    讀取 flags.json。
+    - 不存在 → 自動建立 {}
+    - JSON 損壞 → backup 原檔 + reset {}
+    - file lock-safe：讀取前先確認檔案完整性
+    """
     if not FLAGS_FILE.exists():
         logger.info("[data_manager] flags.json 不存在，自動初始化")
         _save_json(FLAGS_FILE, {})
-    return _load_json(FLAGS_FILE, {})
+        return {}
+    try:
+        with open(FLAGS_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        if not content:
+            raise ValueError("flags.json 為空")
+        data = json.loads(content)
+        if not isinstance(data, dict):
+            raise ValueError("flags.json 非 dict")
+        return data
+    except Exception as exc:
+        # 損壞時 backup 原檔並 reset
+        backup = FLAGS_FILE.with_suffix(".json.bak")
+        try:
+            import shutil
+            shutil.copy2(FLAGS_FILE, backup)
+            logger.warning("[data_manager] flags.json 損壞，已備份至 %s，重置為 {}: %s",
+                           backup.name, exc)
+        except Exception:
+            pass
+        _save_json(FLAGS_FILE, {})
+        return {}
 
 
 def save_flags(flags: dict) -> bool:
