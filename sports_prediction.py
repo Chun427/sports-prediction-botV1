@@ -109,21 +109,11 @@ def push_today(debug: bool = False):
             if not in_window and not debug:
                 continue
 
-            # ── 賽後驗證優先 ──────────────────────────────
             if dm.get_flag(game_id).get("pre_pushed") and not dm.is_post_pushed(game_id):
-                post_items = rv.auto_results([game])
-                for item in post_items:
-                    _push_post_game(item)
-                    pushed_count += 1
+                [(_push_post_game(i), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
                 continue
-
-            # ── 賽前推播 ──────────────────────────────────
-            if rv.is_silent_hours() and not debug:
-                logger.info("[main] 靜音時段，跳過推播 game_id=%s", game_id)
-                continue
-
-            if dm.is_pushed_today(game_id) and not debug:
-                continue   # 今日已推，跳過
+            if rv.is_silent_hours() and not debug: continue
+            if dm.is_pushed_today(game_id) and not debug: continue
 
             # 組裝 game_data
             game_data = _build_game_data(game)
@@ -240,21 +230,30 @@ def _push_post_game(item: dict) -> bool:
     verify = item["verify"]
     sim    = item["sim"]
     try:
-        now = datetime.now(TW).strftime("%m/%d")
+        now        = datetime.now(TW).strftime("%m/%d")
+        hit_count  = verify["hit_count"]
+        value_edge = float(sim.get("value_edge") or 0)
+        value_team = sim.get("home_team","") if sim.get("value_team") == "home"                      else sim.get("away_team","")
+
+        # EV / Edge / Kelly 模型表現評估
+        ev_accuracy  = "✔ 正向" if float(sim.get("home_win_pct",50)) > 50 and verify["moneyline_hit"] else                        "✔ 符合預期" if verify["moneyline_hit"] else "✘ 本場偏差"
+        edge_hit     = "✔ 有效" if value_edge > 0 and verify["moneyline_hit"] else                        "✔ 無Value場次" if value_edge <= 0 else "✘ Edge未命中"
+        kelly_result = "✔ 合理" if float(sim.get("kelly_pct",0)) > 0 else "- 本場無建議"
+
+        from notifier import _market_bias_label
+        v = verify; ve = value_edge
         data = {
-            "date":             now,
-            "hit":              verify["hit_count"],
-            "total":            verify["total"],
-            "hit_pct":          verify["hit_pct"],
-            "pred_mode":        sim.get("pred_mode", "📐 規則模擬"),
-            "moneyline_result": verify["moneyline_result"],
-            "moneyline_hit":    "✅" if verify["moneyline_hit"] else "❌",
-            "exact_score":      verify["exact_score"],
-            "exact_hit":        "✅" if verify["exact_hit"]     else "❌",
-            "spread_result":    verify["spread_result"],
-            "spread_hit":       "✅" if verify["spread_hit"]    else "❌",
-            "ou_result":        verify["ou_result"],
-            "ou_hit":           "✅" if verify["ou_hit"]        else "❌",
+            "date": now, "sport_emoji": game.get("sport_emoji","🏆"),
+            "home": game.get("home_team",""), "away": game.get("away_team",""),
+            "hit": hit_count, "total": v["total"], "hit_pct": v["hit_pct"],
+            "moneyline_hit": "✅" if v["moneyline_hit"] else "❌",
+            "exact_hit":     "✅" if v["exact_hit"]     else "❌",
+            "spread_hit":    "✅" if v["spread_hit"]    else "❌",
+            "ou_hit":        "✅" if v["ou_hit"]        else "❌",
+            "ev_accuracy": ev_accuracy, "edge_hit": edge_hit, "kelly_result": kelly_result,
+            "value_team": value_team or game.get("home_team",""),
+            "value_edge": f"+{ve:.1f}" if ve >= 0 else f"{ve:.1f}",
+            "market_bias": _market_bias_label(ve), "pred_mode": "量化分析",
         }
         return nt.push_post_game(data)
     except Exception as exc:
