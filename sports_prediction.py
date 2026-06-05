@@ -76,7 +76,13 @@ def _get_games(force_refresh: bool = False) -> list[dict]:
         logger.info("[main] 抓取最新賽事...")
         games = df.fetch_all_sports_games()
         if games:
-            dm.save_weekly_games(games)
+            # Layer 1 過濾：只保留今天的比賽進池
+            today_games = [g for g in games
+                           if rv.is_in_pool(g.get("game_time_utc",""), g.get("game_time",""))]
+            logger.info("[main] 建池完成：%d 場（今日）/ %d 場（總計）",
+                        len(today_games), len(games))
+            dm.save_weekly_games(today_games)
+            games = today_games
         else:
             games = dm.load_weekly_games()
             logger.warning("[main] 抓取失敗，使用快取賽事 (%d 場)", len(games))
