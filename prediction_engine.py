@@ -219,9 +219,21 @@ def run_monte_carlo(game_data: dict) -> dict:
         away_wins  = int(np.sum(away_scores > home_scores))
         draws      = int(np.sum(home_scores == away_scores))
 
-        home_win_pct = round(home_wins / n * 100, 1)
-        away_win_pct = round(away_wins / n * 100, 1)
-        draw_pct     = round(draws / n * 100, 1)
+        if sport in ("FIFA",):
+            # FIFA：平局是有效結果，保留三方機率，三者加總 = 100%
+            home_win_pct = round(home_wins / n * 100, 1)
+            away_win_pct = round(away_wins / n * 100, 1)
+            draw_pct     = round(draws / n * 100, 1)
+        else:
+            # NBA / MLB：平局是 MC 數值產物，非真實事件
+            # 重新正規化：把 draw 移除，home + away = 100%
+            decisive = home_wins + away_wins
+            if decisive > 0:
+                home_win_pct = round(home_wins / decisive * 100, 1)
+                away_win_pct = round(100 - home_win_pct, 1)
+            else:
+                home_win_pct = away_win_pct = 50.0
+            draw_pct = None
 
         # 大小分
         total_line = float(game_data.get("totals", {}).get("line") or (home_mean + away_mean))
