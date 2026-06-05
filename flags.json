@@ -4,10 +4,10 @@
     "pre_pushed": true,
     "sim_result": {
       "home_win_pct": 46.9,
-      "away_win_pct": 42.5,
+      "away_win_pct": 42.6,
       "draw_pct": null,
-      "over_pct": 44.7,
-      "under_pct": 55.3,
+      "over_pct": 44.6,
+      "under_pct": 55.4,
       "home_cover_pct": 36.5,
       "spread_line": -1.5,
       "total_line": 11.054,
@@ -44,9 +44,9 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": 1.8,
+      "value_edge": 1.9,
       "home_edge": -12.4,
-      "away_edge": 1.8,
+      "away_edge": 1.9,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
       "spread_line_txt": "Cubs +1.5｜覆蓋率 36.5%",
@@ -62,7 +62,7 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 42.5,
+      "home_win_pct": 42.4,
       "away_win_pct": 46.9,
       "draw_pct": null,
       "over_pct": 50.0,
@@ -79,7 +79,7 @@
         [
           4,
           5,
-          2.4
+          2.5
         ],
         [
           5,
@@ -94,19 +94,19 @@
         [
           3,
           4,
-          2.2
+          2.3
         ]
       ],
       "home_mean": 4.1,
       "away_mean": 4.3,
       "pred_mode": "📐 規則模擬",
       "error": null,
-      "has_value": true,
-      "value_team": "home",
-      "value_edge": 5.1,
-      "home_edge": 5.1,
+      "has_value": false,
+      "value_team": "",
+      "value_edge": 5.0,
+      "home_edge": 5.0,
       "away_edge": -15.7,
-      "kelly_pct": 0.0,
+      "kelly_pct": 12.8,
       "confidence": "🟢 高",
       "spread_line_txt": "Phillies +1.5｜覆蓋率 32.3%",
       "market_home_prob": 37.4,
@@ -122,7 +122,7 @@
     "pre_pushed": true,
     "sim_result": {
       "home_win_pct": 43.8,
-      "away_win_pct": 45.2,
+      "away_win_pct": 45.3,
       "draw_pct": null,
       "over_pct": 51.5,
       "under_pct": 48.5,
@@ -146,13 +146,13 @@
           2.4
         ],
         [
-          3,
-          3,
+          4,
+          5,
           2.3
         ],
         [
-          4,
-          5,
+          3,
+          3,
           2.2
         ]
       ],
@@ -180,19 +180,19 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 43.5,
-      "away_win_pct": 45.7,
+      "home_win_pct": 43.4,
+      "away_win_pct": 45.8,
       "draw_pct": null,
       "over_pct": 55.3,
       "under_pct": 44.7,
-      "home_cover_pct": 33.2,
+      "home_cover_pct": 33.1,
       "spread_line": -1.167,
       "total_line": 7.889,
       "top5_scores": [
         [
           4,
           4,
-          2.5
+          2.6
         ],
         [
           3,
@@ -221,12 +221,12 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": 0.5,
-      "home_edge": 0.5,
-      "away_edge": -11.3,
-      "kelly_pct": 1.4,
+      "value_edge": 0.4,
+      "home_edge": 0.4,
+      "away_edge": -11.2,
+      "kelly_pct": 1.6,
       "confidence": "🟢 高",
-      "spread_line_txt": "Yankees +1.167｜覆蓋率 33.2%",
+      "spread_line_txt": "Yankees +1.167｜覆蓋率 33.1%",
       "market_home_prob": 43.0,
       "market_away_prob": 57.0,
       "home_team": "New York Yankees",
@@ -239,12 +239,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 43.3,
-      "away_win_pct": 45.9,
+      "home_win_pct": 43.4,
+      "away_win_pct": 45.8,
       "draw_pct": null,
       "over_pct": 45.1,
       "under_pct": 54.9,
-      "home_cover_pct": 33.1,
+      "home_cover_pct": 33.2,
       "spread_line": -1.286,
       "total_line": 8.056,
       "top5_scores": [
@@ -280,12 +280,12 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": 0.7,
-      "home_edge": 0.7,
-      "away_edge": -11.5,
-      "kelly_pct": 1.7,
+      "value_edge": 0.8,
+      "home_edge": 0.8,
+      "away_edge": -11.6,
+      "kelly_pct": 1.5,
       "confidence": "🔴 低",
-      "spread_line_txt": "Jays +1.286｜覆蓋率 33.1%",
+      "spread_line_txt": "Jays +1.286｜覆蓋率 33.2%",
       "market_home_prob": 42.6,
       "market_away_prob": 57.4,
       "home_team": "Toronto Blue Jays",
@@ -299,11 +299,11 @@
     "pre_pushed": true,
     "sim_result": {
       "home_win_pct": 43.6,
-      "away_win_pct": 45.5,
+      "away_win_pct": 45.4,
       "draw_pct": null,
-      "over_pct": 50.7,
-      "under_pct": 49.3,
-      "home_cover_pct": 65.0,
+      "over_pct": 50.6,
+      "under_pct": 49.4,
+      "home_cover_pct": 65.1,
       "spread_line": 1.385,
       "total_line": 7.5,
       "top5_scores": [
@@ -330,7 +330,7 @@
         [
           4,
           5,
-          2.3
+          2.2
         ]
       ],
       "home_mean": 3.7,
@@ -341,10 +341,10 @@
       "value_team": "",
       "value_edge": -1.6,
       "home_edge": -1.6,
-      "away_edge": -9.3,
+      "away_edge": -9.4,
       "kelly_pct": 0.0,
       "confidence": "🔴 低",
-      "spread_line_txt": "Marlins -1.385｜覆蓋率 65.0%",
+      "spread_line_txt": "Marlins -1.385｜覆蓋率 65.1%",
       "market_home_prob": 45.2,
       "market_away_prob": 54.8,
       "home_team": "Miami Marlins",
@@ -357,12 +357,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 45.9,
-      "away_win_pct": 43.4,
+      "home_win_pct": 45.8,
+      "away_win_pct": 43.5,
       "draw_pct": null,
-      "over_pct": 49.9,
-      "under_pct": 50.1,
-      "home_cover_pct": 35.5,
+      "over_pct": 50.0,
+      "under_pct": 50.0,
+      "home_cover_pct": 35.4,
       "spread_line": -1.154,
       "total_line": 8.464,
       "top5_scores": [
@@ -374,7 +374,7 @@
         [
           5,
           4,
-          2.5
+          2.4
         ],
         [
           4,
@@ -398,12 +398,12 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": -0.1,
-      "home_edge": -10.6,
-      "away_edge": -0.1,
+      "value_edge": 0.0,
+      "home_edge": -10.7,
+      "away_edge": 0.0,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
-      "spread_line_txt": "Braves +1.154｜覆蓋率 35.5%",
+      "spread_line_txt": "Braves +1.154｜覆蓋率 35.4%",
       "market_home_prob": 56.5,
       "market_away_prob": 43.5,
       "home_team": "Atlanta Braves",
@@ -417,16 +417,26 @@
     "pre_pushed": true,
     "sim_result": {
       "home_win_pct": 44.7,
-      "away_win_pct": 44.5,
+      "away_win_pct": 44.6,
       "draw_pct": null,
-      "over_pct": 55.0,
-      "under_pct": 45.0,
+      "over_pct": 55.1,
+      "under_pct": 44.9,
       "home_cover_pct": 65.7,
       "spread_line": 1.154,
       "total_line": 8.889,
       "top5_scores": [
         [
+          4,
           5,
+          2.5
+        ],
+        [
+          5,
+          4,
+          2.4
+        ],
+        [
+          4,
           4,
           2.4
         ],
@@ -436,18 +446,8 @@
           2.4
         ],
         [
-          4,
-          4,
-          2.4
-        ],
-        [
-          4,
-          5,
-          2.4
-        ],
-        [
-          5,
           3,
+          5,
           2.1
         ]
       ],
@@ -457,9 +457,9 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": -4.5,
+      "value_edge": -4.4,
       "home_edge": -6.3,
-      "away_edge": -4.5,
+      "away_edge": -4.4,
       "kelly_pct": 0.0,
       "confidence": "🔴 低",
       "spread_line_txt": "Astros -1.154｜覆蓋率 65.7%",
@@ -478,8 +478,8 @@
       "home_win_pct": 43.5,
       "away_win_pct": 45.9,
       "draw_pct": null,
-      "over_pct": 45.0,
-      "under_pct": 55.0,
+      "over_pct": 45.1,
+      "under_pct": 54.9,
       "home_cover_pct": 33.3,
       "spread_line": -1.167,
       "total_line": 9.071,
@@ -491,12 +491,12 @@
         ],
         [
           5,
-          5,
+          4,
           2.4
         ],
         [
           5,
-          4,
+          5,
           2.4
         ],
         [
@@ -507,7 +507,7 @@
         [
           4,
           6,
-          2.1
+          2.2
         ]
       ],
       "home_mean": 4.5,
@@ -537,9 +537,9 @@
       "home_win_pct": 45.5,
       "away_win_pct": 43.5,
       "draw_pct": null,
-      "over_pct": 48.7,
-      "under_pct": 51.3,
-      "home_cover_pct": 66.9,
+      "over_pct": 48.8,
+      "under_pct": 51.2,
+      "home_cover_pct": 66.8,
       "spread_line": 1.389,
       "total_line": 7.339,
       "top5_scores": [
@@ -551,7 +551,7 @@
         [
           4,
           3,
-          2.5
+          2.4
         ],
         [
           3,
@@ -561,7 +561,7 @@
         [
           3,
           3,
-          2.4
+          2.3
         ],
         [
           5,
@@ -580,7 +580,7 @@
       "away_edge": -0.3,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
-      "spread_line_txt": "Rangers -1.389｜覆蓋率 66.9%",
+      "spread_line_txt": "Rangers -1.389｜覆蓋率 66.8%",
       "market_home_prob": 56.2,
       "market_away_prob": 43.8,
       "home_team": "Texas Rangers",
@@ -593,12 +593,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 44.3,
-      "away_win_pct": 44.9,
+      "home_win_pct": 44.2,
+      "away_win_pct": 45.0,
       "draw_pct": null,
-      "over_pct": 49.4,
-      "under_pct": 50.6,
-      "home_cover_pct": 44.3,
+      "over_pct": 49.3,
+      "under_pct": 50.7,
+      "home_cover_pct": 44.2,
       "spread_line": -0.3,
       "total_line": 8.426,
       "top5_scores": [
@@ -625,7 +625,7 @@
         [
           3,
           4,
-          2.2
+          2.3
         ]
       ],
       "home_mean": 4.2,
@@ -634,12 +634,12 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": -4.3,
-      "home_edge": -4.3,
-      "away_edge": -6.5,
+      "value_edge": -4.4,
+      "home_edge": -4.4,
+      "away_edge": -6.4,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
-      "spread_line_txt": "Twins +0.3｜覆蓋率 44.3%",
+      "spread_line_txt": "Twins +0.3｜覆蓋率 44.2%",
       "market_home_prob": 48.6,
       "market_away_prob": 51.4,
       "home_team": "Minnesota Twins",
@@ -653,11 +653,11 @@
     "pre_pushed": true,
     "sim_result": {
       "home_win_pct": 37.3,
-      "away_win_pct": 60.5,
+      "away_win_pct": 60.6,
       "draw_pct": null,
-      "over_pct": 50.5,
-      "under_pct": 49.5,
-      "home_cover_pct": 25.6,
+      "over_pct": 50.4,
+      "under_pct": 49.6,
+      "home_cover_pct": 25.5,
       "spread_line": -6.068,
       "total_line": 215.672,
       "top5_scores": [
@@ -668,7 +668,7 @@
         ],
         [
           104,
-          112,
+          110,
           0.1
         ],
         [
@@ -677,13 +677,13 @@
           0.1
         ],
         [
-          106,
-          110,
+          107,
+          109,
           0.1
         ],
         [
-          103,
-          112,
+          105,
+          114,
           0.1
         ]
       ],
@@ -695,10 +695,10 @@
       "value_team": "",
       "value_edge": 3.7,
       "home_edge": 3.7,
-      "away_edge": -5.9,
-      "kelly_pct": 39.3,
+      "away_edge": -5.8,
+      "kelly_pct": 39.5,
       "confidence": "🔴 低",
-      "spread_line_txt": "Spurs +6.068｜覆蓋率 25.6%",
+      "spread_line_txt": "Spurs +6.068｜覆蓋率 25.5%",
       "market_home_prob": 33.6,
       "market_away_prob": 66.4,
       "home_team": "San Antonio Spurs",
@@ -711,12 +711,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 42.9,
-      "away_win_pct": 46.5,
+      "home_win_pct": 42.8,
+      "away_win_pct": 46.6,
       "draw_pct": null,
-      "over_pct": 49.6,
-      "under_pct": 50.4,
-      "home_cover_pct": 63.8,
+      "over_pct": 49.5,
+      "under_pct": 50.5,
+      "home_cover_pct": 63.7,
       "spread_line": 1.463,
       "total_line": 11.464,
       "top5_scores": [
@@ -728,7 +728,7 @@
         [
           5,
           6,
-          2.5
+          2.4
         ],
         [
           6,
@@ -752,12 +752,12 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": 0.8,
-      "home_edge": 0.8,
-      "away_edge": -11.4,
+      "value_edge": 0.7,
+      "home_edge": 0.7,
+      "away_edge": -11.3,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
-      "spread_line_txt": "Rockies -1.463｜覆蓋率 63.8%",
+      "spread_line_txt": "Rockies -1.463｜覆蓋率 63.7%",
       "market_home_prob": 42.1,
       "market_away_prob": 57.9,
       "home_team": "Colorado Rockies",
@@ -773,8 +773,8 @@
       "home_win_pct": 45.6,
       "away_win_pct": 43.7,
       "draw_pct": null,
-      "over_pct": 45.0,
-      "under_pct": 55.0,
+      "over_pct": 45.1,
+      "under_pct": 54.9,
       "home_cover_pct": 35.3,
       "spread_line": -1.115,
       "total_line": 9.074,
@@ -785,12 +785,12 @@
           2.5
         ],
         [
-          4,
+          5,
           5,
           2.4
         ],
         [
-          5,
+          4,
           5,
           2.4
         ],
@@ -829,12 +829,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 43.9,
+      "home_win_pct": 43.8,
       "away_win_pct": 45.2,
       "draw_pct": null,
-      "over_pct": 49.1,
-      "under_pct": 50.9,
-      "home_cover_pct": 33.5,
+      "over_pct": 49.2,
+      "under_pct": 50.8,
+      "home_cover_pct": 33.4,
       "spread_line": -1.056,
       "total_line": 7.375,
       "top5_scores": [
@@ -844,13 +844,13 @@
           2.5
         ],
         [
-          3,
           4,
+          3,
           2.4
         ],
         [
-          4,
           3,
+          4,
           2.4
         ],
         [
@@ -870,12 +870,12 @@
       "error": null,
       "has_value": false,
       "value_team": "",
-      "value_edge": -1.8,
-      "home_edge": -1.8,
+      "value_edge": -1.9,
+      "home_edge": -1.9,
       "away_edge": -9.1,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
-      "spread_line_txt": "Padres +1.056｜覆蓋率 33.5%",
+      "spread_line_txt": "Padres +1.056｜覆蓋率 33.4%",
       "market_home_prob": 45.7,
       "market_away_prob": 54.3,
       "home_team": "San Diego Padres",
@@ -888,12 +888,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 42.4,
-      "away_win_pct": 46.8,
+      "home_win_pct": 42.3,
+      "away_win_pct": 47.0,
       "draw_pct": null,
-      "over_pct": 48.6,
-      "under_pct": 51.4,
-      "home_cover_pct": 32.2,
+      "over_pct": 48.7,
+      "under_pct": 51.3,
+      "home_cover_pct": 32.1,
       "spread_line": -1.5,
       "total_line": 8.354,
       "top5_scores": [
@@ -918,7 +918,7 @@
           2.3
         ],
         [
-          5,
+          3,
           5,
           2.3
         ]
@@ -929,12 +929,12 @@
       "error": null,
       "has_value": true,
       "value_team": "home",
-      "value_edge": 5.7,
-      "home_edge": 5.7,
-      "away_edge": -16.5,
+      "value_edge": 5.6,
+      "home_edge": 5.6,
+      "away_edge": -16.3,
       "kelly_pct": 0.0,
       "confidence": "🟢 高",
-      "spread_line_txt": "Dodgers +1.5｜覆蓋率 32.2%",
+      "spread_line_txt": "Dodgers +1.5｜覆蓋率 32.1%",
       "market_home_prob": 36.7,
       "market_away_prob": 63.3,
       "home_team": "Los Angeles Dodgers",
@@ -950,8 +950,8 @@
       "home_win_pct": 47.1,
       "away_win_pct": 26.8,
       "draw_pct": 26.1,
-      "over_pct": 48.5,
-      "under_pct": 51.5,
+      "over_pct": 48.4,
+      "under_pct": 51.6,
       "home_cover_pct": 21.7,
       "spread_line": -1.25,
       "total_line": 2.474,
@@ -964,7 +964,7 @@
         [
           2,
           1,
-          12.6
+          12.5
         ],
         [
           2,
@@ -974,7 +974,7 @@
         [
           1,
           0,
-          10.4
+          10.5
         ],
         [
           1,
@@ -1006,12 +1006,12 @@
     "pushed_date": "2026-06-05",
     "pre_pushed": true,
     "sim_result": {
-      "home_win_pct": 42.4,
+      "home_win_pct": 42.5,
       "away_win_pct": 30.8,
       "draw_pct": 26.7,
       "over_pct": 47.1,
       "under_pct": 52.9,
-      "home_cover_pct": 42.4,
+      "home_cover_pct": 42.5,
       "spread_line": -0.083,
       "total_line": 2.403,
       "top5_scores": [
@@ -1028,7 +1028,7 @@
         [
           1,
           0,
-          10.1
+          10.2
         ],
         [
           1,
@@ -1047,12 +1047,12 @@
       "error": null,
       "has_value": true,
       "value_team": "home",
-      "value_edge": 8.4,
-      "home_edge": 8.4,
+      "value_edge": 8.5,
+      "home_edge": 8.5,
       "away_edge": -4.7,
-      "kelly_pct": 8.0,
+      "kelly_pct": 8.2,
       "confidence": "🟢 高",
-      "spread_line_txt": "Korea +0.083｜覆蓋率 42.4%",
+      "spread_line_txt": "Korea +0.083｜覆蓋率 42.5%",
       "market_home_prob": 34.0,
       "market_away_prob": 35.5,
       "home_team": "South Korea",
