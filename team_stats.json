@@ -5,6 +5,11 @@
       "avg_score": 111.1,
       "std_score": 6.9,
       "games": 10
+    },
+    "New York Knicks": {
+      "avg_score": 110.7,
+      "std_score": 5.9,
+      "games": 10
     }
   }
 }
