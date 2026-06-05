@@ -118,13 +118,11 @@ git push
 ```
 🎯 精算師預測系統
 ⚡ 量化預測模型（賽前 30 分鐘）
-
 ━━━━━━━━━━━━━━━━
 📅 台灣時間 06/05 09:41
 ⚾ MLB
 Arizona Diamondbacks 🆚 Los Angeles Dodgers
 ━━━━━━━━━━━━━━━━
-
 📐 去Vig真實勝率
 Arizona Diamondbacks  ████░░░░░░ 43.8%
 Los Angeles Dodgers   █████░░░░░ 56.2%
@@ -132,12 +130,10 @@ Los Angeles Dodgers   █████░░░░░ 56.2%
 蒙特卡羅模擬勝率
 Arizona Diamondbacks  ███░░░░░░░ 32.5%
 Los Angeles Dodgers   ██████░░░░ 67.5%
-
 ━━━━━━━━━━━━━━━━
 📊 Edge（模型優勢）
 Arizona Diamondbacks -11.3%
 Los Angeles Dodgers +11.3%
-
 ━━━━━━━━━━━━━━━━
 🏆 最可能出現的比分
 🥇 Los Angeles Dodgers 6–4 Arizona Diamondbacks（2.7%）
@@ -145,24 +141,22 @@ Los Angeles Dodgers +11.3%
 🥉 Los Angeles Dodgers 6–3 Arizona Diamondbacks（2.4%）
 4️⃣ Los Angeles Dodgers 6–5 Arizona Diamondbacks（2.4%）
 5️⃣ Los Angeles Dodgers 5–3 Arizona Diamondbacks（2.4%）
-
 ━━━━━━━━━━━━━━━━
 📊 盤口深度分析
 讓分盤口     Los Angeles Dodgers +1.5
 總分大小     9.5（大分 🔼）
-獨贏賠率     Arizona Diamondbacks:+116｜Los Angeles Dodgers:-136
-
+獨贏賠率
+Arizona Diamondbacks:+116
+Los Angeles Dodgers:-136
 ━━━━━━━━━━━━━━━━
 💰 台灣運彩實戰建議
 🔮【主推】獨贏盤 → Los Angeles Dodgers 勝出
 💎【次要】總分大小 → 大分(9.5)
 ⭐【備選】讓分盤 → Los Angeles Dodgers(+1.5)
-
 ━━━━━━━━━━━━━━━━
 📊 風控資訊
 - Kelly：4.2%
 - Risk Level：中
-
 ━━━━━━━━━━━━━━━━
 📡 數據來源：AI模型+真實數據+賠率
 ⚠️ 請理性投注。
