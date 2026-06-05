@@ -112,17 +112,19 @@ def _empty_verify() -> dict:
 #  時間視窗判斷
 # ══════════════════════════════════════════════════════════
 
-# 推播視窗參數（方便調整）
-WINDOW_MIN_H = 0.5    # 開賽前最少 30 分鐘
-WINDOW_MAX_H = 6.0    # 開賽前最多 6 小時（原本 3h 太窄，改為 6h）
+# 推播視窗參數
+WINDOW_MIN_H  = -0.5   # 開賽後 30 分鐘內仍可推（避免剛好沒跑到）
+WINDOW_MAX_H  = 24.0   # 未來 24 小時內的賽事都納入候選
+SAME_DAY_ONLY = True   # True = 只推今天（台灣時間）的賽事
 
 
 def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
-    推播視窗（統一 Asia/Taipei）：
-      開賽前 WINDOW_MIN_H ～ WINDOW_MAX_H 小時
-    game_time_utc 解析失敗時 fallback 用 game_time_tw。
-    每場都會 log diff_h，方便追蹤被擋原因。
+    推播視窗策略（統一 Asia/Taipei）：
+      SAME_DAY_ONLY=True：只推「台灣時間今天」的賽事（00:00~23:59）
+      不受 diff_h 上限限制，解決「早上跑但比賽在晚上」的問題。
+      下限 WINDOW_MIN_H=-0.5：開賽後 30 分鐘仍可推（避免錯過）。
+    每場都 log diff_h，方便追蹤。
     """
     now_tw  = datetime.now(TW)
     game_dt = _parse_utc_to_tw(game_time_utc)
@@ -132,13 +134,22 @@ def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
         logger.warning("[verifier] in_push_window 無法解析 utc=%s tw=%s",
                        game_time_utc, game_time_tw)
         return False
+
     diff_h = (game_dt - now_tw).total_seconds() / 3600
-    in_win = WINDOW_MIN_H <= diff_h <= WINDOW_MAX_H
-    # 每場都 log，方便 debug（不只有命中才 log）
+
+    if SAME_DAY_ONLY:
+        # 今天台灣時間（00:00 ~ 23:59）的賽事
+        today_start = now_tw.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end   = now_tw.replace(hour=23, minute=59, second=59, microsecond=0)
+        in_win = today_start <= game_dt <= today_end and diff_h >= WINDOW_MIN_H
+        reason = "today" if in_win else ("past" if diff_h < WINDOW_MIN_H else "future_day")
+    else:
+        in_win = WINDOW_MIN_H <= diff_h <= WINDOW_MAX_H
+        reason = "in_window" if in_win else "out_of_window"
+
     status = "✅ IN" if in_win else "⛔ OUT"
-    logger.info("[verifier] %s %s diff=%.1fh window=[%.1f~%.1fh]",
-                status, game_time_tw or game_time_utc[:16],
-                diff_h, WINDOW_MIN_H, WINDOW_MAX_H)
+    logger.info("[verifier] %s %s diff=%.1fh reason=%s",
+                status, game_time_tw or game_time_utc[:16], diff_h, reason)
     return in_win
 
 
