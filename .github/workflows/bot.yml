@@ -1,2 +1,145 @@
-- cron: "0 22 * * *"   # 每日 06:00 TW → Daily Fetch
-- cron: "0 * * * *"    # 每小時整點 → Hourly Push
+name: Sports Prediction Bot
+
+on:
+  schedule:
+    - cron: "0 * * * *"    # 每小時整點執行（UTC）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-sports-v1
+          restore-keys: pip-sports-v1
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests numpy nba_api pybaseball \
+                      scikit-learn xgboost joblib pandas \
+                      thefuzz python-Levenshtein
+
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: |
+            flags.json
+            weekly_games.json
+            team_stats.json
+            metrics.json
+            historical_dataset.csv
+          key: persistent-state-v2
+          restore-keys: persistent-state-v2
+
+      - name: Restore ML models
+        uses: actions/cache@v4
+        with:
+          path: |
+            model_A.pkl
+            model_B.pkl
+          key: ml-models-v1
+          restore-keys: ml-models-v1
+
+      - name: Validate secrets
+        run: |
+          [ -z "$TG_TOKEN" ]     && echo "::error::TG_TOKEN 未設定"     && exit 1 || true
+          [ -z "$TG_CHAT" ]      && echo "::error::TG_CHAT 未設定"      && exit 1 || true
+          [ -z "$ODDS_API_KEY" ] && echo "::error::ODDS_API_KEY 未設定" && exit 1 || true
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+
+      - name: Daily fetch at 06:00 TW (UTC 22:00)
+        run: |
+          HOUR=$(date -u +%-H)
+          if [ "$HOUR" -eq 22 ]; then
+            echo "執行 daily fetch..."
+            python sports_prediction.py fetch
+          else
+            echo "非 daily fetch 時間（UTC $HOUR），跳過"
+          fi
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true
+
+      - name: Hourly push
+        run: python sports_prediction.py push
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true
+
+      - name: Weekly report at 21:00 TW Sunday (UTC 13:00)
+        run: |
+          HOUR=$(date -u +%-H)
+          DOW=$(date -u +%u)
+          if [ "$DOW" -eq 7 ] && [ "$HOUR" -eq 13 ]; then
+            echo "執行週報..."
+            python sports_prediction.py weekly
+          else
+            echo "非週報時間，跳過"
+          fi
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true
+
+      - name: Try train XGBoost
+        run: python train.py
+        env:
+          TG_TOKEN:     ${{ secrets.TG_TOKEN }}
+          TG_CHAT:      ${{ secrets.TG_CHAT }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        continue-on-error: true
+
+      - name: Save state
+        uses: actions/cache@v4
+        with:
+          path: |
+            flags.json
+            weekly_games.json
+            team_stats.json
+            metrics.json
+            historical_dataset.csv
+          key: persistent-state-v2
+
+      - name: Save ML models
+        uses: actions/cache@v4
+        with:
+          path: |
+            model_A.pkl
+            model_B.pkl
+          key: ml-models-v1
+
+      - name: Git commit state
+        run: |
+          git config user.email "bot@sports-prediction"
+          git config user.name  "SportsBot"
+          git add flags.json weekly_games.json team_stats.json \
+                  metrics.json historical_dataset.csv \
+                  model_A.pkl model_B.pkl 2>/dev/null || true
+          git diff --cached --quiet || \
+            git commit -m "[bot] update state $(date -u +%Y-%m-%d\ %H:%M)" && git push
+        continue-on-error: true
