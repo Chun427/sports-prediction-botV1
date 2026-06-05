@@ -61,28 +61,32 @@ except ImportError:
 
 #  賽事快取管理
 
-def _filter_today(games: list[dict]) -> list[dict]:
+def _filter_pool(games: list[dict]) -> list[dict]:
     """
-    建池唯一過濾器：只保留台灣時間「今天」的賽事。
-    嚴格禁止任何推播時間判斷（diff / window / verifier）。
-    不在此處 reject 任何今天的比賽。
+    Rolling pool 過濾器：
+    - 移除 3 天以前已結束的舊賽事（避免 pool 無限膨脹）
+    - 保留今天 + 未來所有賽事（依各 sport lookahead 已在 fetcher 控制）
+    - 不做任何推播時間判斷（那是 push_engine 的責任）
     """
     from datetime import datetime, timezone, timedelta
-    TW = timezone(timedelta(hours=8))
-    now_tw      = datetime.now(TW)
-    today_start = now_tw.replace(hour=0,  minute=0,  second=0,  microsecond=0)
-    today_end   = now_tw.replace(hour=23, minute=59, second=59, microsecond=0)
-    result = []
+    TW      = timezone(timedelta(hours=8))
+    cutoff  = datetime.now(TW) - timedelta(days=3)   # 3天前以上才移除
+    result  = []
+    removed = 0
     for g in games:
         try:
             utc_str = g.get("game_time_utc", "")
             if not utc_str:
                 continue
             gdt = datetime.fromisoformat(utc_str.replace("Z", "+00:00")).astimezone(TW)
-            if today_start <= gdt <= today_end:
+            if gdt >= cutoff:
                 result.append(g)
+            else:
+                removed += 1
         except Exception:
-            continue
+            result.append(g)   # 解析失敗保留，不丟掉
+    if removed:
+        logger.info("[main] pool 移除 %d 場舊賽事（3天前）", removed)
     return result
 
 
@@ -103,8 +107,8 @@ def _get_games(force_refresh: bool = False) -> list[dict]:
         if raw:
             # 建池：只做日期過濾，把「今天台灣時間」的比賽存入 cache
             # 嚴格禁止在這裡做任何推播時間判斷（diff / window / verifier）
-            today_games = _filter_today(raw)
-            logger.info("[main] 建池完成 pool=%d / fetched=%d",
+            today_games = _filter_pool(raw)
+            logger.info("[main] Rolling pool=%d / fetched=%d",
                         len(today_games), len(raw))
             dm.save_weekly_games(today_games)
             games = today_games
