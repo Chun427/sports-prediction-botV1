@@ -112,11 +112,17 @@ def _empty_verify() -> dict:
 #  時間視窗判斷
 # ══════════════════════════════════════════════════════════
 
+# 推播視窗參數（方便調整）
+WINDOW_MIN_H = 0.5    # 開賽前最少 30 分鐘
+WINDOW_MAX_H = 6.0    # 開賽前最多 6 小時（原本 3h 太窄，改為 6h）
+
+
 def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
     推播視窗（統一 Asia/Taipei）：
-      開賽前 30 分鐘 ～ 3 小時（0.5h ~ 3.0h）
+      開賽前 WINDOW_MIN_H ～ WINDOW_MAX_H 小時
     game_time_utc 解析失敗時 fallback 用 game_time_tw。
+    每場都會 log diff_h，方便追蹤被擋原因。
     """
     now_tw  = datetime.now(TW)
     game_dt = _parse_utc_to_tw(game_time_utc)
@@ -127,10 +133,12 @@ def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
                        game_time_utc, game_time_tw)
         return False
     diff_h = (game_dt - now_tw).total_seconds() / 3600
-    in_win = 0.5 <= diff_h <= 3.0
-    if in_win:
-        logger.info("[verifier] %s 符合推播窗口（距開賽 %.1fh）",
-                    game_time_tw or game_time_utc, diff_h)
+    in_win = WINDOW_MIN_H <= diff_h <= WINDOW_MAX_H
+    # 每場都 log，方便 debug（不只有命中才 log）
+    status = "✅ IN" if in_win else "⛔ OUT"
+    logger.info("[verifier] %s %s diff=%.1fh window=[%.1f~%.1fh]",
+                status, game_time_tw or game_time_utc[:16],
+                diff_h, WINDOW_MIN_H, WINDOW_MAX_H)
     return in_win
 
 
