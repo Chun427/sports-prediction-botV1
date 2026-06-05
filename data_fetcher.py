@@ -21,13 +21,15 @@ RETRY_COUNT    = 3
 RETRY_DELAY    = 3
 REQUEST_TIMEOUT = 15
 
-# 支援的聯盟 sport key（只保留目前 API 有效的）
-# WBC / OLYMPICS 已從 Odds API 下架，移除以避免 404 重試浪費時間
+# 支援的聯盟 sport key（核心清單，不含已失效的 WBC/OLYMPICS）
 SPORT_KEYS = {
     "NBA":  "basketball_nba",
     "MLB":  "baseball_mlb",
     "FIFA": "soccer_fifa_world_cup",
 }
+
+# 動態驗證快取（當日有效 sport keys）
+_VALID_SPORT_KEYS_CACHE: set[str] = set()
 
 SPORT_EMOJI = {
     "NBA": "🏀", "MLB": "⚾", "FIFA": "⚽",
@@ -37,9 +39,7 @@ SPORT_EMOJI = {
 # 賠率 API 失敗時的預設場次（至少不讓 CI 斷）
 DEFAULT_GAMES: list[dict] = []
 
-# ══════════════════════════════════════════════════════════
 #  HTTP 通用 retry
-# ══════════════════════════════════════════════════════════
 
 def _get(url: str, params: dict = None) -> Optional[dict]:
     for attempt in range(1, RETRY_COUNT + 1):
@@ -54,9 +54,7 @@ def _get(url: str, params: dict = None) -> Optional[dict]:
             time.sleep(RETRY_DELAY)
     return None
 
-# ══════════════════════════════════════════════════════════
 #  The Odds API
-# ══════════════════════════════════════════════════════════
 
 def fetch_odds(sport_key: str, markets: str = "h2h,spreads,totals") -> list[dict]:
     """
@@ -80,32 +78,50 @@ def fetch_odds(sport_key: str, markets: str = "h2h,spreads,totals") -> list[dict
         return []
     return data if isinstance(data, list) else []
 
+def fetch_valid_sport_keys() -> set[str]:
+    global _VALID_SPORT_KEYS_CACHE
+    if _VALID_SPORT_KEYS_CACHE:
+        return _VALID_SPORT_KEYS_CACHE
+    if not ODDS_API_KEY:
+        return set(SPORT_KEYS.values())
+    data = _get(f"{ODDS_API_BASE}/sports", {"apiKey": ODDS_API_KEY})
+    if data and isinstance(data, list):
+        _VALID_SPORT_KEYS_CACHE = {s["key"] for s in data if s.get("active")}
+        logger.info("[fetcher] 動態 sports：%d 個有效 key", len(_VALID_SPORT_KEYS_CACHE))
+        return _VALID_SPORT_KEYS_CACHE
+    logger.warning("[fetcher] /sports 失敗，使用內建清單")
+    return set(SPORT_KEYS.values())
+
 def fetch_all_sports_games() -> list[dict]:
     """
-    抓取所有支援聯盟的今日 / 本週賽事並整理為統一格式。
+    抓取所有支援聯盟的今日賽事並整理為統一格式。
+    先驗證 sport key 是否有效（避免 404 重試浪費時間）。
     失敗時回傳 DEFAULT_GAMES。
     """
-    games = []
-    now   = datetime.now(TW)
+    valid_keys = fetch_valid_sport_keys()
+    games      = []
+    now        = datetime.now(TW)
+    fetch_log  = {"ok": [], "skip": [], "fail": []}
 
     for sport_name, sport_key in SPORT_KEYS.items():
+        if sport_key not in valid_keys:
+            fetch_log["skip"].append(sport_name); continue
         try:
-            raw = fetch_odds(sport_key)
-            for item in raw:
-                game = _parse_game(item, sport_name)
-                if game:
-                    games.append(game)
+            raw = fetch_odds(sport_key); n = len(games)
+            games += [g for item in raw if (g := _parse_game(item, sport_name))]
+            fetch_log["ok"].append(f"{sport_name}+{len(games)-n}")
         except Exception as exc:
-            logger.warning("[fetcher] %s 賽事抓取失敗: %s", sport_name, exc)
+            logger.warning("[fetcher] %s 失敗: %s", sport_name, exc)
+            fetch_log["fail"].append(sport_name)
 
+    logger.info("[fetcher] Fetch ok=%s skip=%s fail=%s total=%d",
+                fetch_log["ok"], fetch_log["skip"], fetch_log["fail"], len(games))
     if not games:
         logger.warning("[fetcher] 所有賽事抓取失敗，回退 DEFAULT_GAMES")
         return DEFAULT_GAMES
-
-    # 排除超過 7 天後的賽事
-    cutoff = now + timedelta(days=7)
-    games = [g for g in games if _parse_game_time(g.get("game_time", "")) <= cutoff]
-    games.sort(key=lambda g: g.get("game_time", ""))
+    cutoff = now + timedelta(days=3)
+    games  = [g for g in games if _parse_game_time(g.get("game_time","")) <= cutoff]
+    games.sort(key=lambda g: g.get("game_time",""))
     return games
 
 def _parse_game(item: dict, sport_name: str) -> Optional[dict]:
@@ -227,9 +243,7 @@ def _extract_totals(item: dict) -> dict:
         "under_odds": _avg(under_list),
     }
 
-# ══════════════════════════════════════════════════════════
 #  去 Vig（還原真實勝率）
-# ══════════════════════════════════════════════════════════
 
 def remove_vig(home_odds: float, away_odds: float, draw_odds: float = None) -> dict:
     """
@@ -323,9 +337,7 @@ def _confidence_from_dispersion(dispersion: float) -> str:
         return "🟡 中"
     return "🔴 低"
 
-# ══════════════════════════════════════════════════════════
 #  nba_api — 近 10 場場均得分 & 標準差
-# ══════════════════════════════════════════════════════════
 
 def fetch_nba_team_stats(team_name: str) -> Optional[dict]:
     """
@@ -362,9 +374,7 @@ def fetch_nba_team_stats(team_name: str) -> Optional[dict]:
         logger.warning("[fetcher] nba_api 抓取失敗 team=%s: %s", team_name, exc)
         return None
 
-# ══════════════════════════════════════════════════════════
 #  pybaseball — 本季場均得分
-# ══════════════════════════════════════════════════════════
 
 def fetch_mlb_team_stats(team_name: str) -> Optional[dict]:
     """
@@ -396,9 +406,7 @@ def fetch_mlb_team_stats(team_name: str) -> Optional[dict]:
         logger.warning("[fetcher] pybaseball 抓取失敗 team=%s: %s", team_name, exc)
         return None
 
-# ══════════════════════════════════════════════════════════
 #  賽後比分抓取
-# ══════════════════════════════════════════════════════════
 
 def fetch_game_result(game: dict) -> Optional[dict]:
     """
@@ -436,9 +444,7 @@ def fetch_game_result(game: dict) -> Optional[dict]:
 
     return None
 
-# ══════════════════════════════════════════════════════════
 #  輔助函式
-# ══════════════════════════════════════════════════════════
 
 def _utc_to_tw(utc_str: str) -> str:
     try:
