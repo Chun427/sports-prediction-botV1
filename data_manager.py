@@ -173,15 +173,24 @@ def save_weekly_games(games: list) -> bool:
 
 
 def weekly_games_expired() -> bool:
-    """快取超過 24 小時視為過期。"""
+    """
+    快取是否過期：非今天（台灣時間）抓的資料即視為過期。
+    確保每天都重抓當日最新賽程，避免推播昨天或明天的快取。
+    """
     data = _load_json(WEEKLY_FILE, {})
     updated_at = data.get("updated_at")
     if not updated_at:
         return True
     try:
         dt = datetime.fromisoformat(updated_at)
-        age = (datetime.now(TW) - dt).total_seconds()
-        return age > 86400
+        # 只要不是今天抓的就過期（不管幾小時前）
+        cached_date = dt.astimezone(TW).strftime("%Y-%m-%d")
+        today       = datetime.now(TW).strftime("%Y-%m-%d")
+        expired     = cached_date != today
+        if expired:
+            logger.info("[data_manager] weekly_games 快取過期（抓取日=%s，今日=%s）",
+                        cached_date, today)
+        return expired
     except Exception:
         return True
 
