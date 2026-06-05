@@ -289,7 +289,7 @@ python backtester.py wc                 # 世界盃 Brier Score
 
 -----
 
-## 🧠 兩層架構說明
+## 🧠 三層架構說明
 
 ```
 【Phase 1：建池（Rolling Pool）】
@@ -299,13 +299,28 @@ python backtester.py wc                 # 世界盃 Brier Score
   ✅ 今天 + 未來 N 天比賽 → 進池
   ✅ 過去 3 天未結算賽事 → 保留
   ❌ 3 天前已結束賽事 → 移除
-  ❌ 不做任何推播時間判斷
+  ❌ 不做任何推播相關處理
 
-【Phase 2：push_engine】
-  才做推播決策：
-  ✅ 今日未推播 → 進入模型 → 推播
-  ⏭️ 已推播過  → skip（is_pushed_today 防重複）
-  🔕 靜音時段  → 無聲推播（不響鈴）
+【Phase 2：今日賽事資料層（Data Layer Only）】
+  從 Rolling Pool 篩選今日賽事（純資料，絕不觸發推播）：
+  ✅ game_date == today（台灣時間）
+  ✅ completed == False
+  ❌ 不可進入 push_engine
+  ❌ 不可做 eligibility 判斷
+  ❌ 不可觸發任何推播
+  ✔ 只能回傳 today_games 資料
+
+【Phase 3：唯一推播引擎（Time Window Engine）】
+  🚨 系統唯一允許推播的入口
+  所有推播行為完全由時間窗口控制，不依賴今日賽事條件觸發
+
+  賽前推播：距開賽 <= 30 分鐘 + 今日未推過 → 推播賽前預測
+  賽後推播：completed=True + 賽後 60 分鐘內 → 推播賽後驗證
+  ⏭️ 已推播過 → skip（is_pushed_today 防重複）
+  🔕 靜音時段 → 無聲推播（不響鈴）
+
+  今日有賽事 ≠ 會推播
+  只有進入 30 分鐘窗口才推播
 ```
 
 -----
@@ -348,28 +363,45 @@ python backtester.py wc                 # 世界盃 Brier Score
 ## ⚙️ 排程邏輯
 
 ```
-【兩層排程架構】
+【三層排程架構】
 
+━━━━━━━━━━━━━━━━
 Phase 1：建池（Rolling Pool）
+━━━━━━━━━━━━━━━━
   每小時執行，REFRESH_HOURS_TW={0,6,12,18} 時強制重抓 API
   依聯盟動態 lookahead：NBA/MLB=2天，FIFA=14天
   移除 3 天前舊賽事，保留今天 + 未來 N 天
   完全不做推播時間判斷
 
-Phase 2：每小時整點 → Hourly Push
-  從 Rolling Pool 讀取賽事
-  已推播 → skip（is_pushed_today 防重複）
-  靜音時段（23:00~08:00）→ 無聲推播（不響鈴）
-  其餘 → 進入模型預測 → 推播
-  無推播條件 → 發送推播決策報告（靜音）
+━━━━━━━━━━━━━━━━
+Phase 2：今日賽事資料層（Data Layer Only）
+━━━━━━━━━━━━━━━━
+  從 Rolling Pool 篩選今日賽事（純資料）：
+  ✅ game_date == today（台灣時間）
+  ✅ completed == False
+  ❌ 不觸發任何推播，只回傳資料
 
+━━━━━━━━━━━━━━━━
+Phase 3：唯一推播引擎（Time Window Engine）
+━━━━━━━━━━━━━━━━
+
+  🔮 賽前推播（唯一觸發來源）
+  條件：距開賽 <= 30 分鐘 + is_pre_game_pushed == False
+  流程：時間窗口觸發 → 模型預測 → EV/Kelly/Edge → Telegram 推播
+
+  📊 賽後推播（唯一觸發來源）
+  條件：completed=True + 賽後 60 分鐘內 + is_post_game_pushed == False
+  流程：時間窗口觸發 → 統計結果 → 命中率 → 推播賽後報告
+
+━━━━━━━━━━━━━━━━
 🔕 靜音模式（台灣時間 23:00 ~ 08:00）
+━━━━━━━━━━━━━━━━
 
 | 推播類型 | 靜音期間行為 |
 |---|---|
 | 賽前預測 | 正常推播，但**無聲通知**（不響鈴） |
-| 推播決策報告 | 正常推播，但**無聲通知**（不響鈴） |
 | 賽後驗證報告 | 正常推播，但**無聲通知**（不響鈴） |
+| 推播決策報告 | 正常推播，但**無聲通知**（不響鈴） |
 
 每週日 21:00 TW → 推播週報 + 系統自學指標
 每次 CI 結束 → 嘗試訓練 XGBoost（資料不足時靜默跳過）
