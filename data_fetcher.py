@@ -21,13 +21,12 @@ RETRY_COUNT    = 3
 RETRY_DELAY    = 3
 REQUEST_TIMEOUT = 15
 
-# 支援的聯盟 sport key 對應
+# 支援的聯盟 sport key（只保留目前 API 有效的）
+# WBC / OLYMPICS 已從 Odds API 下架，移除以避免 404 重試浪費時間
 SPORT_KEYS = {
-    "NBA":      "basketball_nba",
-    "MLB":      "baseball_mlb",
-    "FIFA":     "soccer_fifa_world_cup",
-    "WBC":      "baseball_wbc",
-    "OLYMPICS": "basketball_olympics_mens",
+    "NBA":  "basketball_nba",
+    "MLB":  "baseball_mlb",
+    "FIFA": "soccer_fifa_world_cup",
 }
 
 SPORT_EMOJI = {
