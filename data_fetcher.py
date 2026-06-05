@@ -28,6 +28,15 @@ SPORT_KEYS = {
     "FIFA": "soccer_fifa_world_cup",
 }
 
+# 每個聯盟的 rolling lookahead（天數）
+# NBA/MLB 每天都有賽事，2天夠；FIFA World Cup 需要提前建池
+LOOKAHEAD_DAYS = {
+    "NBA":  2,
+    "MLB":  2,
+    "FIFA": 14,
+}
+LOOKBACK_DAYS = 3   # 往回抓幾天（未結算賽事）
+
 # 動態驗證快取（當日有效 sport keys）
 _VALID_SPORT_KEYS_CACHE: set[str] = set()
 
@@ -88,24 +97,19 @@ def fetch_valid_sport_keys() -> set[str]:
     logger.warning("[fetcher] /sports 失敗，使用內建清單")
     return set(SPORT_KEYS.values())
 
-def _today_window() -> tuple[str, str]:
+def _rolling_window(sport_name: str) -> tuple[str, str]:
     """
-    回傳今日台灣時間的 UTC 時間範圍（ISO 8601）。
-    若現在是 00:00 → 從今天 00:00 開始；
-    其他時間（06/12/18 刷新）→ 從現在開始，避免浪費額度。
-    結束時間固定為今天 23:59:59 TW（= UTC）。
+    依 sport 產生 rolling 時間窗口：
+      from = 現在 - LOOKBACK_DAYS（抓未結算舊賽事）
+      to   = 現在 + LOOKAHEAD_DAYS[sport]（依聯盟動態）
     """
-    now    = datetime.now(TW)
-    hour   = now.hour
-    # 00:00 建池從今天午夜開始，其餘刷新從現在開始
-    if hour == 0:
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        start = now.replace(second=0, microsecond=0)
-    end = now.replace(hour=23, minute=59, second=59, microsecond=0)
-    # 轉 UTC ISO 格式
-    utc = timezone.utc
-    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    now      = datetime.now(TW)
+    lookback = LOOKBACK_DAYS
+    lookahead = LOOKAHEAD_DAYS.get(sport_name.upper(), 2)
+    start    = now - timedelta(days=lookback)
+    end      = now + timedelta(days=lookahead)
+    fmt      = "%Y-%m-%dT%H:%M:%SZ"
+    utc      = timezone.utc
     return start.astimezone(utc).strftime(fmt), end.astimezone(utc).strftime(fmt)
 
 
@@ -117,17 +121,15 @@ def fetch_all_sports_games() -> list[dict]:
     valid_keys                = fetch_valid_sport_keys()
     games                     = []
     fetch_log                 = {"ok": [], "skip": [], "fail": []}
-    commence_from, commence_to = _today_window()
-
-    logger.info("[fetcher] 抓取今日賽事 from=%s to=%s", commence_from, commence_to)
-
     for sport_name, sport_key in SPORT_KEYS.items():
         if sport_key not in valid_keys:
             fetch_log["skip"].append(sport_name); continue
         try:
-            raw = fetch_odds(sport_key,
-                             commence_from=commence_from,
-                             commence_to=commence_to)
+            # 每個 sport 用自己的 rolling window
+            cf, ct = _rolling_window(sport_name)
+            lookahead = LOOKAHEAD_DAYS.get(sport_name.upper(), 2)
+            logger.info("[fetcher] %s window: from=%s lookahead=%dd", sport_name, cf[:10], lookahead)
+            raw = fetch_odds(sport_key, commence_from=cf, commence_to=ct)
             n = len(games)
             games += [g for item in raw if (g := _parse_game(item, sport_name))]
             fetch_log["ok"].append(f"{sport_name}+{len(games)-n}")
@@ -135,7 +137,7 @@ def fetch_all_sports_games() -> list[dict]:
             logger.warning("[fetcher] %s 失敗: %s", sport_name, exc)
             fetch_log["fail"].append(sport_name)
 
-    logger.info("[fetcher] Daily Cache Report: ok=%s skip=%s fail=%s total=%d",
+    logger.info("[fetcher] Rolling Pool Report: ok=%s skip=%s fail=%s total=%d",
                 fetch_log["ok"], fetch_log["skip"], fetch_log["fail"], len(games))
     if not games:
         logger.warning("[fetcher] 所有賽事抓取失敗，回退 DEFAULT_GAMES")
