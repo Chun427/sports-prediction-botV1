@@ -93,92 +93,113 @@ def push_today(debug: bool = False):
     time_window_block  = 0
     silent_hours_block = 0
     duplicate_block    = 0
-    model_reject_count = 0   # prediction_engine 主動拒絕（result.get("reject")）
-    send_fail_count    = 0   # Telegram 發送失敗 / notifier 例外
+    model_reject_count = 0
+    send_fail_count    = 0
     eligible_games     = 0
+    game_reject_log    = []
 
     for game in games:
-        game_id       = game.get("game_id", "")
-        game_time_utc = game.get("game_time_utc", "")
+        game_id      = game.get('game_id', '')
+        game_time_utc = game.get('game_time_utc', '')
+        game_time_tw  = game.get('game_time', '')
+        hs = game.get('home_short', game.get('home_team', '?'))
+        aw = game.get('away_short', game.get('away_team', '?'))
+
+        def _log_reject(reason, extra='', _hs=hs, _aw=aw, _tw=game_time_tw, _gid=game_id):
+            label = f'{_hs} vs {_aw} [{_tw}] -> {reason}' + (f' ({extra})' if extra else '')
+            game_reject_log.append(label)
+            logger.info('[main] reject game_id=%s reason=%s %s', _gid, reason, extra)
 
         try:
-            in_window = rv.in_push_window(game_time_utc, game.get("game_time", ""))
+            diff_h_str = ''
+            try:
+                from result_verifier import _parse_utc_to_tw as _putw
+                from datetime import datetime, timezone, timedelta as td
+                gdt = _putw(game_time_utc)
+                if gdt:
+                    diff_h = (gdt - datetime.now(timezone(td(hours=8)))).total_seconds() / 3600
+                    diff_h_str = f'diff={diff_h:+.1f}h'
+            except Exception:
+                pass
+
+            in_window = rv.in_push_window(game_time_utc, game_time_tw)
             if not in_window and not debug:
                 time_window_block += 1
-                logger.info("[main] skip out_of_time_window game_id=%s", game_id)
+                _log_reject('out_of_time_window', diff_h_str)
                 continue
 
-            if dm.get_flag(game_id).get("pre_pushed") and not dm.is_post_pushed(game_id):
+            if dm.get_flag(game_id).get('pre_pushed') and not dm.is_post_pushed(game_id):
                 [(_push_post_game(i), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
                 continue
 
             if rv.is_silent_hours() and not debug:
                 silent_hours_block += 1
-                logger.info("[main] skip silent_hours game_id=%s", game_id)
+                _log_reject('silent_hours', diff_h_str)
                 continue
 
             if dm.is_pushed_today(game_id) and not debug:
                 duplicate_block += 1
-                logger.info("[main] skip already_pushed game_id=%s", game_id)
+                _log_reject('already_pushed')
                 continue
 
             eligible_games += 1
-            game_data = _build_game_data(game)
 
             if debug:
-                logger.info("[DEBUG] game_id=%s window=%s pushed_today=%s",
+                logger.info('[DEBUG] game_id=%s window=%s pushed_today=%s',
                             game_id, in_window, dm.is_pushed_today(game_id))
                 if pushed_count >= 2:
                     continue
 
-            result = pe.run_full_prediction(game_data)
+            game_data = _build_game_data(game)
+            result    = pe.run_full_prediction(game_data)
 
-            # 模型主動拒絕（prediction_engine 尚未實作時固定為 False）
-            if result.get("reject", False):
+            if result.get('reject', False):
                 model_reject_count += 1
-                logger.info("[main] model_reject game_id=%s", game_id)
+                _log_reject('model_reject')
                 continue
 
             ok = _push_pre_game(game, result)
             if ok:
                 dm.mark_pushed(game_id, sim_result={**result,
-                    "home_team":  game.get("home_team"),
-                    "away_team":  game.get("away_team"),
-                    "home_short": game.get("home_short"),
-                    "away_short": game.get("away_short"),
+                    'home_team':  game.get('home_team'),
+                    'away_team':  game.get('away_team'),
+                    'home_short': game.get('home_short'),
+                    'away_short': game.get('away_short'),
                 })
                 dm.append_pre_game_row(_build_csv_row(game, result))
                 pushed_count += 1
             else:
                 send_fail_count += 1
-                logger.warning("[main] send_fail game_id=%s", game_id)
+                _log_reject('send_fail')
 
         except Exception as exc:
-            logger.warning("[main] push_today game_id=%s 失敗: %s", game_id, exc)
+            logger.warning('[main] push_today game_id=%s 失敗: %s', game_id, exc)
             send_fail_count += 1
             if debug:
-                nt.push_raw(f"[DEBUG] game_id={game_id} exception: {exc}", silent=True)
+                nt.push_raw(f'[DEBUG] game_id={game_id} exception: {exc}', silent=True)
 
     if _HAS_WC_ENGINE:
         try: pushed_count += wce.check_and_push()
-        except Exception as exc: logger.warning("[main] worldcup_engine 失敗: %s", exc)
+        except Exception as exc: logger.warning('[main] worldcup_engine 失敗: %s', exc)
 
     if pushed_count == 0:
-        logger.info("[main] decision total=%d tw=%d silent=%d dup=%d model_reject=%d send_fail=%d eligible=%d",
+        logger.info('[main] decision total=%d tw=%d silent=%d dup=%d model_reject=%d send_fail=%d eligible=%d',
                     len(games), time_window_block, silent_hours_block,
                     duplicate_block, model_reject_count, send_fail_count, eligible_games)
-        sep = "\u2501" * 14
-        parts = ["\u2699\ufe0f \u63a8\u64ad\u6c7a\u7b56\u5831\u544a", sep, "",
-                 "\U0001f4cb \u7e3d\u8cfd\u4e8b\uff1a" + str(len(games)), "",
-                 "\u26d4 \u6642\u9593\u7a97\u963b\u64cb\uff1a" + str(time_window_block),
-                 "\u26d4 \u975c\u9ed8\u6642\u6bb5\uff1a" + str(silent_hours_block),
-                 "\u26d4 \u5df2\u63a8\u64ad\u904e\uff1a" + str(duplicate_block),
-                 "\u26d4 \u6a21\u578b\u62d2\u7d55\uff1a" + str(model_reject_count),
-                 "\u274c \u63a8\u64ad\u5931\u6557\uff1a" + str(send_fail_count), "",
-                 "\u2705 \u53ef\u9032\u5165\u6a21\u578b\uff1a" + str(eligible_games),
-                 "\U0001f4e1 \u6700\u7d42\u63a8\u64ad\uff1a0", "",
-                 sep, "\u2139\ufe0f \u672c\u8f2a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6"]
-        nt.push_raw("\n".join(parts), silent=True)
+        for entry in game_reject_log:
+            logger.info('[main] reject_detail: %s', entry)
+        sep = '\u2501' * 14
+        parts = ['\u2699\ufe0f \u63a8\u64ad\u6c7a\u7b56\u5831\u544a', sep, '',
+                 '\U0001f4cb \u7e3d\u8cfd\u4e8b\uff1a' + str(len(games)), '',
+                 '\u26d4 \u6642\u9593\u7a97\u963b\u64cb\uff1a' + str(time_window_block),
+                 '\u26d4 \u975c\u9ed8\u6642\u6bb5\uff1a' + str(silent_hours_block),
+                 '\u26d4 \u5df2\u63a8\u64ad\u904e\uff1a' + str(duplicate_block),
+                 '\u26d4 \u6a21\u578b\u62d2\u7d55\uff1a' + str(model_reject_count),
+                 '\u274c \u63a8\u64ad\u5931\u6557\uff1a' + str(send_fail_count), '',
+                 '\u2705 \u53ef\u9032\u5165\u6a21\u578b\uff1a' + str(eligible_games),
+                 '\U0001f4e1 \u6700\u7d42\u63a8\u64ad\uff1a0', '',
+                 sep, '\u2139\ufe0f \u672c\u8f2a\u7121\u7b26\u5408\u63a8\u64ad\u689d\u4ef6']
+        nt.push_raw('\n'.join(parts), silent=True)
 
     dm.git_commit_state()
 
