@@ -142,32 +142,32 @@ def push_today(debug: bool = False):
             logger.info('[main] reject game_id=%s reason=%s %s', _gid, reason, extra)
 
         try:
-            # push_engine：才做推播時間判斷（Layer 2）
-            push_ready = rv.is_push_ready(game_time_utc, game_time_tw)
-            if not push_ready and not debug:
-                time_window_block += 1
-                _log_reject('not_push_ready')
-                continue
-
+            # ── Phase 2 push_engine（唯一判斷點）──────────────
+            # 賽後驗證（已推賽前 + 尚未推賽後）
             if dm.get_flag(game_id).get('pre_pushed') and not dm.is_post_pushed(game_id):
                 [(_push_post_game(i), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
                 continue
 
+            # 靜音時段
             if rv.is_silent_hours() and not debug:
                 silent_hours_block += 1
-                _log_reject('silent_hours', diff_h_str)
+                _log_reject('silent_hours')
                 continue
 
+            # 今日已推過
             if dm.is_pushed_today(game_id) and not debug:
                 duplicate_block += 1
                 _log_reject('already_pushed')
                 continue
 
+            # 通過所有判斷 → eligible
             eligible_games += 1
+            logger.info('[main] eligible game_id=%s %s vs %s [%s]',
+                        game_id, hs, aw, game_time_tw)
 
             if debug:
-                logger.info('[DEBUG] game_id=%s window=%s pushed_today=%s',
-                            game_id, in_window, dm.is_pushed_today(game_id))
+                logger.info('[DEBUG] game_id=%s pushed_today=%s',
+                            game_id, dm.is_pushed_today(game_id))
                 if pushed_count >= 2:
                     continue
 
