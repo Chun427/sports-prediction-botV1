@@ -61,6 +61,31 @@ except ImportError:
 
 #  賽事快取管理
 
+def _filter_today(games: list[dict]) -> list[dict]:
+    """
+    建池唯一過濾器：只保留台灣時間「今天」的賽事。
+    嚴格禁止任何推播時間判斷（diff / window / verifier）。
+    不在此處 reject 任何今天的比賽。
+    """
+    from datetime import datetime, timezone, timedelta
+    TW = timezone(timedelta(hours=8))
+    now_tw      = datetime.now(TW)
+    today_start = now_tw.replace(hour=0,  minute=0,  second=0,  microsecond=0)
+    today_end   = now_tw.replace(hour=23, minute=59, second=59, microsecond=0)
+    result = []
+    for g in games:
+        try:
+            utc_str = g.get("game_time_utc", "")
+            if not utc_str:
+                continue
+            gdt = datetime.fromisoformat(utc_str.replace("Z", "+00:00")).astimezone(TW)
+            if today_start <= gdt <= today_end:
+                result.append(g)
+        except Exception:
+            continue
+    return result
+
+
 def _get_games(force_refresh: bool = False) -> list[dict]:
     """
     取得賽事列表。
@@ -74,13 +99,13 @@ def _get_games(force_refresh: bool = False) -> list[dict]:
 
     if refresh:
         logger.info("[main] 抓取最新賽事...")
-        games = df.fetch_all_sports_games()
-        if games:
-            # Layer 1 過濾：只保留今天的比賽進池
-            today_games = [g for g in games
-                           if rv.is_in_pool(g.get("game_time_utc",""), g.get("game_time",""))]
-            logger.info("[main] 建池完成：%d 場（今日）/ %d 場（總計）",
-                        len(today_games), len(games))
+        raw = df.fetch_all_sports_games()
+        if raw:
+            # 建池：只做日期過濾，把「今天台灣時間」的比賽存入 cache
+            # 嚴格禁止在這裡做任何推播時間判斷（diff / window / verifier）
+            today_games = _filter_today(raw)
+            logger.info("[main] 建池完成 pool=%d / fetched=%d",
+                        len(today_games), len(raw))
             dm.save_weekly_games(today_games)
             games = today_games
         else:
@@ -117,21 +142,11 @@ def push_today(debug: bool = False):
             logger.info('[main] reject game_id=%s reason=%s %s', _gid, reason, extra)
 
         try:
-            diff_h_str = ''
-            try:
-                from result_verifier import _parse_utc_to_tw as _putw
-                from datetime import datetime, timezone, timedelta as td
-                gdt = _putw(game_time_utc)
-                if gdt:
-                    diff_h = (gdt - datetime.now(timezone(td(hours=8)))).total_seconds() / 3600
-                    diff_h_str = f'diff={diff_h:+.1f}h'
-            except Exception:
-                pass
-
-            in_window = rv.in_push_window(game_time_utc, game_time_tw)
-            if not in_window and not debug:
+            # push_engine：才做推播時間判斷（Layer 2）
+            push_ready = rv.is_push_ready(game_time_utc, game_time_tw)
+            if not push_ready and not debug:
                 time_window_block += 1
-                _log_reject('out_of_time_window', diff_h_str)
+                _log_reject('not_push_ready')
                 continue
 
             if dm.get_flag(game_id).get('pre_pushed') and not dm.is_post_pushed(game_id):
