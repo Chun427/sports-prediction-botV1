@@ -302,7 +302,7 @@ python backtester.py wc                 # 世界盃 Brier Score
   才做推播決策：
   ✅ 今日未推播 → 進入模型 → 推播
   ⏭️ 已推播過  → skip
-  🔕 靜音時段  → skip
+  🔕 靜音時段  → 無聲推播（不響鈴）
 ```
 
 -----
