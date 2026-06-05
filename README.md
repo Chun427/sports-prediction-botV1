@@ -314,7 +314,7 @@ python backtester.py wc                 # 世界盃 Brier Score
   🚨 系統唯一允許推播的入口
   所有推播行為完全由時間窗口控制，不依賴今日賽事條件觸發
 
-  賽前推播：距開賽 <= 30 分鐘 + 今日未推過 → 推播賽前預測
+  賽前推播：距開賽 <= 40 分鐘 + 今日未推過 → 推播賽前預測（含 10 分鐘容錯緩衝）
   賽後推播：completed=True + 賽後 60 分鐘內 → 推播賽後驗證
   ⏭️ 已推播過 → skip（is_pushed_today 防重複）
   🔕 靜音時段 → 無聲推播（不響鈴）
@@ -386,7 +386,7 @@ Phase 3：唯一推播引擎（Time Window Engine）
 ━━━━━━━━━━━━━━━━
 
   🔮 賽前推播（唯一觸發來源）
-  條件：距開賽 <= 30 分鐘 + is_pre_game_pushed == False
+  條件：距開賽 <= 40 分鐘 + is_pre_game_pushed == False（含 10 分鐘容錯緩衝）
   流程：時間窗口觸發 → 模型預測 → EV/Kelly/Edge → Telegram 推播
 
   📊 賽後推播（唯一觸發來源）
