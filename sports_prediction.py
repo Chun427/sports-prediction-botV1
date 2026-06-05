@@ -143,15 +143,12 @@ def push_today(debug: bool = False):
 
         try:
             # ── Phase 2 push_engine（唯一判斷點）──────────────
+            # 靜音判斷（最先計算，所有推播都會用到）
+            _silent = rv.is_silent_hours() and not debug
+
             # 賽後驗證（已推賽前 + 尚未推賽後）
             if dm.get_flag(game_id).get('pre_pushed') and not dm.is_post_pushed(game_id):
-                [(_push_post_game(i), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
-                continue
-
-            # 靜音時段
-            if rv.is_silent_hours() and not debug:
-                silent_hours_block += 1
-                _log_reject('silent_hours')
+                [(_push_post_game(i, silent=_silent), pushed_count := pushed_count+1) for i in rv.auto_results([game])]
                 continue
 
             # 今日已推過
@@ -179,7 +176,7 @@ def push_today(debug: bool = False):
                 _log_reject('model_reject')
                 continue
 
-            ok = _push_pre_game(game, result)
+            ok = _push_pre_game(game, result, silent=_silent)
             if ok:
                 dm.mark_pushed(game_id, sim_result={**result,
                     'home_team':  game.get('home_team'),
@@ -224,7 +221,7 @@ def push_today(debug: bool = False):
 
     dm.git_commit_state()
 
-def _push_pre_game(game: dict, result: dict) -> bool:
+def _push_pre_game(game: dict, result: dict, silent: bool = False) -> bool:
     from notifier import fmt_score_top5, fmt_betting_advice
     try:
         vig     = game.get("vig_result", {})
@@ -288,12 +285,12 @@ def _push_pre_game(game: dict, result: dict) -> bool:
             "betting_advice": betting_advice,
             "kelly_pct":      kelly_pct,
         }
-        return nt.push_pre_game(data)
+        return nt.push_pre_game(data, silent=silent)
     except Exception as exc:
         logger.warning("[main] _push_pre_game 失敗: %s", exc)
         return False
 
-def _push_post_game(item: dict) -> bool:
+def _push_post_game(item: dict, silent: bool = False) -> bool:
     game   = item["game"]
     verify = item["verify"]
     sim    = item["sim"]
@@ -322,7 +319,7 @@ def _push_post_game(item: dict) -> bool:
             "value_edge": f"+{ve:.1f}" if ve >= 0 else f"{ve:.1f}",
             "market_bias": _market_bias_label(ve), "pred_mode": "量化分析",
         }
-        return nt.push_post_game(data)
+        return nt.push_post_game(data, silent=silent)
     except Exception as exc:
         logger.warning("[main] _push_post_game 失敗: %s", exc)
         return False
