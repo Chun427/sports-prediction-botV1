@@ -112,45 +112,57 @@ def _empty_verify() -> dict:
 #  時間視窗判斷
 # ══════════════════════════════════════════════════════════
 
-# 推播視窗參數
-WINDOW_MIN_H  = -0.5   # 開賽後 30 分鐘內仍可推（避免錯過）
-SAME_DAY_ONLY = True   # True = 只推台灣時間「今天」的賽事
-# daily-fetch 已確保 cache 是今天的資料，push filter 只要判斷「今天」即可
+# ── 推播視窗（兩層職責分離）──────────────────────────────
+# Layer 1 is_in_pool()：今天的比賽 → 進池（不管幾小時後）
+# Layer 2 is_push_ready()：距開賽 PUSH_BEFORE_H 小時內 → 才推播
+PUSH_BEFORE_H = 3.0    # 開賽前 N 小時才推播通知
+PUSH_AFTER_H  = 0.5    # 開賽後 N 小時內仍可補推
 
 
-def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
+def is_in_pool(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
-    推播視窗策略（統一 Asia/Taipei）：
-      SAME_DAY_ONLY=True：只推「台灣時間今天」的賽事（00:00~23:59）
-      不受 diff_h 上限限制，解決「早上跑但比賽在晚上」的問題。
-      下限 WINDOW_MIN_H=-0.5：開賽後 30 分鐘仍可推（避免錯過）。
-    每場都 log diff_h，方便追蹤。
+    Layer 1：建池判斷。
+    只要是台灣時間今天的比賽（且尚未結束超過 3 小時），就放進池。
+    不做推播時間判斷。
     """
     now_tw  = datetime.now(TW)
     game_dt = _parse_utc_to_tw(game_time_utc)
     if game_dt is None and game_time_tw:
         game_dt = _parse_tw_str(game_time_tw)
     if game_dt is None:
-        logger.warning("[verifier] in_push_window 無法解析 utc=%s tw=%s",
-                       game_time_utc, game_time_tw)
         return False
+    today_start = now_tw.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end   = now_tw.replace(hour=23, minute=59, second=59, microsecond=0)
+    diff_h      = (game_dt - now_tw).total_seconds() / 3600
+    return today_start <= game_dt <= today_end and diff_h >= -3.0
 
+
+def is_push_ready(game_time_utc: str, game_time_tw: str = "") -> bool:
+    """
+    Layer 2：推播時間判斷。
+    距開賽 PUSH_BEFORE_H 小時內，才實際推播。
+    """
+    now_tw  = datetime.now(TW)
+    game_dt = _parse_utc_to_tw(game_time_utc)
+    if game_dt is None and game_time_tw:
+        game_dt = _parse_tw_str(game_time_tw)
+    if game_dt is None:
+        return False
     diff_h = (game_dt - now_tw).total_seconds() / 3600
-
-    if SAME_DAY_ONLY:
-        # 今天台灣時間（00:00 ~ 23:59）的賽事
-        today_start = now_tw.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end   = now_tw.replace(hour=23, minute=59, second=59, microsecond=0)
-        in_win = today_start <= game_dt <= today_end and diff_h >= WINDOW_MIN_H
-        reason = "today" if in_win else ("past" if diff_h < WINDOW_MIN_H else "future_day")
-    else:
-        in_win = WINDOW_MIN_H <= diff_h <= WINDOW_MAX_H
-        reason = "in_window" if in_win else "out_of_window"
-
-    status = "✅ IN" if in_win else "⛔ OUT"
-    logger.info("[verifier] %s %s diff=%.1fh reason=%s",
-                status, game_time_tw or game_time_utc[:16], diff_h, reason)
+    in_win = -PUSH_AFTER_H <= diff_h <= PUSH_BEFORE_H
+    status = "✅ PUSH" if in_win else "⏳ WAIT"
+    logger.info("[verifier] %s %s diff=%.1fh window=[%.1f~%.1fh]",
+                status, game_time_tw or game_time_utc[:16],
+                diff_h, -PUSH_AFTER_H, PUSH_BEFORE_H)
     return in_win
+
+
+def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
+    """
+    Push stage 使用：只有距開賽 PUSH_BEFORE_H 小時內才推播。
+    （建池邏輯用 is_in_pool，不在這裡）
+    """
+    return is_push_ready(game_time_utc, game_time_tw)
 
 
 def _parse_utc_to_tw(utc_str: str):
