@@ -56,22 +56,18 @@ def _get(url: str, params: dict = None) -> Optional[dict]:
 
 #  The Odds API
 
-def fetch_odds(sport_key: str, markets: str = "h2h,spreads,totals") -> list[dict]:
-    """
-    抓取指定聯盟賠率。
-    失敗回傳空 list（不 raise）。
-    """
+def fetch_odds(sport_key: str, markets: str = "h2h,spreads,totals",
+               commence_from: str = None, commence_to: str = None) -> list[dict]:
     if not ODDS_API_KEY:
         logger.error("[fetcher] ODDS_API_KEY 未設定")
         return []
-
     url    = f"{ODDS_API_BASE}/sports/{sport_key}/odds"
-    params = {
-        "apiKey":   ODDS_API_KEY,
-        "regions":  "us,eu,uk",
-        "markets":  markets,
-        "oddsFormat": "decimal",
-    }
+    params = {"apiKey": ODDS_API_KEY, "regions": "us,eu,uk",
+              "markets": markets, "oddsFormat": "decimal"}
+    if commence_from:
+        params["commenceTimeFrom"] = commence_from
+    if commence_to:
+        params["commenceTimeTo"]   = commence_to
     data = _get(url, params)
     if data is None:
         logger.warning("[fetcher] fetch_odds 失敗，sport=%s", sport_key)
@@ -92,36 +88,59 @@ def fetch_valid_sport_keys() -> set[str]:
     logger.warning("[fetcher] /sports 失敗，使用內建清單")
     return set(SPORT_KEYS.values())
 
+def _today_window() -> tuple[str, str]:
+    """
+    回傳今日台灣時間的 UTC 時間範圍（ISO 8601）。
+    若現在是 00:00 → 從今天 00:00 開始；
+    其他時間（06/12/18 刷新）→ 從現在開始，避免浪費額度。
+    結束時間固定為今天 23:59:59 TW（= UTC）。
+    """
+    now    = datetime.now(TW)
+    hour   = now.hour
+    # 00:00 建池從今天午夜開始，其餘刷新從現在開始
+    if hour == 0:
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        start = now.replace(second=0, microsecond=0)
+    end = now.replace(hour=23, minute=59, second=59, microsecond=0)
+    # 轉 UTC ISO 格式
+    utc = timezone.utc
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    return start.astimezone(utc).strftime(fmt), end.astimezone(utc).strftime(fmt)
+
+
 def fetch_all_sports_games() -> list[dict]:
     """
-    抓取所有支援聯盟的今日賽事並整理為統一格式。
-    先驗證 sport key 是否有效（避免 404 重試浪費時間）。
-    失敗時回傳 DEFAULT_GAMES。
+    抓取今日賽事（commenceTimeFrom=現在 ~ commenceTimeTo=今天23:59 TW）。
+    cache 內禁止出現明天以後的賽事。
     """
-    valid_keys = fetch_valid_sport_keys()
-    games      = []
-    now        = datetime.now(TW)
-    fetch_log  = {"ok": [], "skip": [], "fail": []}
+    valid_keys                = fetch_valid_sport_keys()
+    games                     = []
+    fetch_log                 = {"ok": [], "skip": [], "fail": []}
+    commence_from, commence_to = _today_window()
+
+    logger.info("[fetcher] 抓取今日賽事 from=%s to=%s", commence_from, commence_to)
 
     for sport_name, sport_key in SPORT_KEYS.items():
         if sport_key not in valid_keys:
             fetch_log["skip"].append(sport_name); continue
         try:
-            raw = fetch_odds(sport_key); n = len(games)
+            raw = fetch_odds(sport_key,
+                             commence_from=commence_from,
+                             commence_to=commence_to)
+            n = len(games)
             games += [g for item in raw if (g := _parse_game(item, sport_name))]
             fetch_log["ok"].append(f"{sport_name}+{len(games)-n}")
         except Exception as exc:
             logger.warning("[fetcher] %s 失敗: %s", sport_name, exc)
             fetch_log["fail"].append(sport_name)
 
-    logger.info("[fetcher] Fetch ok=%s skip=%s fail=%s total=%d",
+    logger.info("[fetcher] Daily Cache Report: ok=%s skip=%s fail=%s total=%d",
                 fetch_log["ok"], fetch_log["skip"], fetch_log["fail"], len(games))
     if not games:
         logger.warning("[fetcher] 所有賽事抓取失敗，回退 DEFAULT_GAMES")
         return DEFAULT_GAMES
-    cutoff = now + timedelta(days=3)
-    games  = [g for g in games if _parse_game_time(g.get("game_time","")) <= cutoff]
-    games.sort(key=lambda g: g.get("game_time",""))
+    games.sort(key=lambda g: g.get("game_time", ""))
     return games
 
 def _parse_game(item: dict, sport_name: str) -> Optional[dict]:
