@@ -306,7 +306,7 @@ def _market_bias_label(value_edge: float) -> str:
 #  公開推播函式
 # ══════════════════════════════════════════════════════════
 
-def push_pre_game(data: dict) -> bool:
+def push_pre_game(data: dict, silent: bool = False) -> bool:
     # 信心指數加百分比
     conf     = data.get("confidence", "🔴 低")
     conf_pct = data.get("confidence_pct")
@@ -344,16 +344,16 @@ def push_pre_game(data: dict) -> bool:
 
     try:
         msg = _PRE_GAME_TMPL.format(**data)
-        return _send(msg)
+        return _send(msg, silent=silent)
     except KeyError as exc:
         logger.error("[notifier] push_pre_game 缺少欄位: %s", exc)
         return False
 
 
-def push_post_game(data: dict) -> bool:
+def push_post_game(data: dict, silent: bool = False) -> bool:
     try:
         msg = _POST_GAME_TMPL.format(**data)
-        return _send(msg)
+        return _send(msg, silent=silent)
     except KeyError as exc:
         logger.error("[notifier] push_post_game 缺少欄位: %s", exc)
         return False
