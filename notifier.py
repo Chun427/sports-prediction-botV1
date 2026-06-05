@@ -57,13 +57,11 @@ def _send(text: str, silent: bool = False) -> bool:
 _PRE_GAME_TMPL = """\
 🎯 精算師預測系統
 ⚡ 量化預測模型（賽前 30 分鐘）
-
 ━━━━━━━━━━━━━━━━
 📅 台灣時間 {date}
 {sport_emoji} {league}
 {home} 🆚 {away}
 ━━━━━━━━━━━━━━━━
-
 📐 去Vig真實勝率
 {home} {vig_bar_home} {vig_home_pct}%
 {away} {vig_bar_away} {vig_away_pct}%
@@ -71,31 +69,27 @@ _PRE_GAME_TMPL = """\
 蒙特卡羅模擬勝率
 {home} {mc_bar_home} {mc_home_pct}%
 {away} {mc_bar_away} {mc_away_pct}%
-
 ━━━━━━━━━━━━━━━━
 📊 Edge（模型優勢）
 {home} {home_edge_fmt}%
 {away} {away_edge_fmt}%
-
 ━━━━━━━━━━━━━━━━
 🏆 最可能出現的比分
 {score_top5}
-
 ━━━━━━━━━━━━━━━━
 📊 盤口深度分析
 讓分盤口     {spread_display}
 總分大小     {total_line}（{ou_direction}）
-獨贏賠率     {home}:{home_odds_display}｜{away}:{away_odds_display}
-
+獨贏賠率
+{home}:{home_odds_display}
+{away}:{away_odds_display}
 ━━━━━━━━━━━━━━━━
 💰 台灣運彩實戰建議
 {betting_advice}
-
 ━━━━━━━━━━━━━━━━
 📊 風控資訊
 - Kelly：{kelly_pct}%
 - Risk Level：{risk_level}
-
 ━━━━━━━━━━━━━━━━
 📡 數據來源：{data_source}
 ⚠️ 請理性投注。"""
