@@ -158,11 +158,47 @@ def is_push_ready(game_time_utc: str, game_time_tw: str = "") -> bool:
 
 
 def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
+    """向後相容保留，實際由 is_pre_push_window 取代。"""
+    return is_pre_push_window(game_time_utc, game_time_tw)
+
+
+def is_pre_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
-    Push stage 使用：只有距開賽 PUSH_BEFORE_H 小時內才推播。
-    （建池邏輯用 is_in_pool，不在這裡）
+    Phase 3 唯一賽前推播條件：
+    距開賽時間 <= PRE_PUSH_MINUTES 分鐘，且尚未開賽（diff >= 0）。
+    名實相符：推播標語「賽前 30 分鐘」。
     """
-    return is_push_ready(game_time_utc, game_time_tw)
+    now_tw  = datetime.now(TW)
+    game_dt = _parse_utc_to_tw(game_time_utc)
+    if game_dt is None and game_time_tw:
+        game_dt = _parse_tw_str(game_time_tw)
+    if game_dt is None:
+        return False
+    diff_min = (game_dt - now_tw).total_seconds() / 60
+    in_win   = 0 <= diff_min <= PRE_PUSH_MINUTES
+    status   = "🚀 PRE-PUSH" if in_win else "⏳ WAIT"
+    logger.info("[verifier] %s %s diff=%.0fmin window=[0~%dmin]",
+                status, game_time_tw or game_time_utc[:16],
+                diff_min, PRE_PUSH_MINUTES)
+    return in_win
+
+
+def is_post_push_window(game_time_utc: str, game_time_tw: str = "",
+                        duration_min: int = 120) -> bool:
+    """
+    Phase 3 唯一賽後推播條件：
+    比賽結束後 POST_PUSH_MINUTES 分鐘內（預設比賽時長 duration_min=120 分鐘）。
+    """
+    now_tw  = datetime.now(TW)
+    game_dt = _parse_utc_to_tw(game_time_utc)
+    if game_dt is None and game_time_tw:
+        game_dt = _parse_tw_str(game_time_tw)
+    if game_dt is None:
+        return False
+    # 估計結束時間 = 開賽時間 + duration_min
+    end_dt   = game_dt + timedelta(minutes=duration_min)
+    diff_min = (now_tw - end_dt).total_seconds() / 60
+    return 0 <= diff_min <= POST_PUSH_MINUTES
 
 
 def _parse_utc_to_tw(utc_str: str):
