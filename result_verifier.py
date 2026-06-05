@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 TW = timezone(timedelta(hours=8))
 
 FORCE_TRIGGER_HOURS = 4   # completed=False 但逾 N 小時強制觸發
+PRE_PUSH_MINUTES  = 40    # 賽前推播窗口（40min buffer 避免每小時 cron miss）
+POST_PUSH_MINUTES = 60    # 賽後推播窗口
 
 
 # ══════════════════════════════════════════════════════════
