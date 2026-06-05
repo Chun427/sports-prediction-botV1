@@ -113,9 +113,9 @@ def _empty_verify() -> dict:
 # ══════════════════════════════════════════════════════════
 
 # 推播視窗參數
-WINDOW_MIN_H  = -0.5   # 開賽後 30 分鐘內仍可推（避免剛好沒跑到）
-WINDOW_MAX_H  = 24.0   # 未來 24 小時內的賽事都納入候選
-SAME_DAY_ONLY = True   # True = 只推今天（台灣時間）的賽事
+WINDOW_MIN_H  = -0.5   # 開賽後 30 分鐘內仍可推（避免錯過）
+SAME_DAY_ONLY = True   # True = 只推台灣時間「今天」的賽事
+# daily-fetch 已確保 cache 是今天的資料，push filter 只要判斷「今天」即可
 
 
 def in_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
