@@ -35,6 +35,12 @@
 
 **支援運動：NBA、MLB、FIFA 世界盃**（WBC / 奧運男籃 API 已停用）
 
+|聯盟      |Lookahead|說明           |
+|--------|---------|-------------|
+|NBA     |2 天      |每天都有賽事，短窗口足夠 |
+|MLB     |2 天      |每天都有賽事，短窗口足夠 |
+|FIFA 世界盃|14 天     |國際賽事提前建池，避免漏推|
+
 -----
 
 ## 📁 檔案結構
@@ -286,16 +292,19 @@ python backtester.py wc                 # 世界盃 Brier Score
 ## 🧠 兩層架構說明
 
 ```
-【Phase 1：建池（_filter_today）】
-  只做一件事：收集今天台灣時間的賽事
-  ✅ 今天的比賽 → 全部進池
-  ❌ 明天/未來  → 排除
+【Phase 1：建池（Rolling Pool）】
+  依各聯盟動態 lookahead 建立賽事池：
+  NBA / MLB → 未來 2 天
+  FIFA 世界盃 → 未來 14 天
+  ✅ 今天 + 未來 N 天比賽 → 進池
+  ✅ 過去 3 天未結算賽事 → 保留
+  ❌ 3 天前已結束賽事 → 移除
   ❌ 不做任何推播時間判斷
 
 【Phase 2：push_engine】
   才做推播決策：
   ✅ 今日未推播 → 進入模型 → 推播
-  ⏭️ 已推播過  → skip
+  ⏭️ 已推播過  → skip（is_pushed_today 防重複）
   🔕 靜音時段  → 無聲推播（不響鈴）
 ```
 
@@ -341,14 +350,15 @@ python backtester.py wc                 # 世界盃 Brier Score
 ```
 【兩層排程架構】
 
-Phase 1：建池（_filter_today）
+Phase 1：建池（Rolling Pool）
   每小時執行，REFRESH_HOURS_TW={0,6,12,18} 時強制重抓 API
-  只保留台灣時間今天的賽事存入 cache
+  依聯盟動態 lookahead：NBA/MLB=2天，FIFA=14天
+  移除 3 天前舊賽事，保留今天 + 未來 N 天
   完全不做推播時間判斷
 
 Phase 2：每小時整點 → Hourly Push
-  從 cache 讀取今日賽事
-  已推播 → skip
+  從 Rolling Pool 讀取賽事
+  已推播 → skip（is_pushed_today 防重複）
   靜音時段（23:00~08:00）→ 無聲推播（不響鈴）
   其餘 → 進入模型預測 → 推播
   無推播條件 → 發送推播決策報告（靜音）
