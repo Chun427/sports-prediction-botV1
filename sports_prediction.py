@@ -286,6 +286,7 @@ def _push_pre_game(game: dict, result: dict) -> bool:
             "spread_line_val": spread_val, "total_line": total_line, "over_pct": over_pct,
             "home_odds_raw": h2h.get("home"), "away_odds_raw": h2h.get("away"),
             "betting_advice": betting_advice,
+            "kelly_pct":      kelly_pct,
         }
         return nt.push_pre_game(data)
     except Exception as exc:
