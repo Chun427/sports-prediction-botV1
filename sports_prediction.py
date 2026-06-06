@@ -403,8 +403,9 @@ def _build_game_data(game: dict) -> dict:
     sport   = game.get("sport", "NBA").upper()
     h2h     = game.get("h2h_odds", {})
 
-    # 去 Vig
-    vig_result = df.remove_vig_multi_bookmaker(h2h)
+    # 去 Vig（傳入隊名，確保主客映射正確 [C2]）
+    vig_result = df.remove_vig_multi_bookmaker(
+        h2h, game.get("home_team", ""), game.get("away_team", ""))
 
     # 真實數據修正
     home_stat = _get_team_stats(game.get("home_team", ""), sport)
