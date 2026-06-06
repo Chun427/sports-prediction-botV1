@@ -1,4 +1,1 @@
 game_id,date,sport,league,home_team,away_team,home_odds,away_odds,draw_odds,spread,total_line,home_win_prob,away_win_prob,home_avg_score,away_avg_score,home_std,away_std,bookmaker_count,vig_pct,value_edge,kelly_fraction,pred_mode,actual_home_score,actual_away_score,moneyline_hit,spread_hit,ou_hit,exact_hit
-5d56d7bc8e07f9dd9a440c554bcaba58,2026-06-07,MLB,MLB,Detroit Tigers,Seattle Mariners,2.1,1.8,,1.5,9.0,0.491,0.509,,,,,45,,3.3,0.0,📐 規則模擬,,,,,,
-ed237b95b2bcbe6bc050a75bcf54cf3b,2026-06-07,MLB,MLB,Minnesota Twins,Kansas City Royals,1.7,2.2,,-1.5,8.5,0.514,0.486,,,,,45,,5.8,5.8,📐 規則模擬,,,,,,
-c516931bbaf1d49406d58e749625e96a,2026-06-07,MLB,MLB,St. Louis Cardinals,Cincinnati Reds,1.8,2.1,,-1.5,9.0,0.507,0.493,,,,,45,,3.0,0.0,📐 規則模擬,,,,,,
