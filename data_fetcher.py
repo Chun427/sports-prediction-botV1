@@ -4,6 +4,7 @@ data_fetcher.py — 純資料抓取層
 不包含任何 prediction / push 邏輯。
 """
 import logging
+import statistics
 import os
 import time
 from datetime import datetime, timezone, timedelta
@@ -203,7 +204,8 @@ def _extract_h2h(item: dict) -> dict:
                     draw_odds_list.append(price)
 
     def _avg(lst):
-        return round(sum(lst) / len(lst), 3) if lst else None
+        # 用中位數聚合，避免離群莊家造成偏誤 [M1]
+        return round(statistics.median(lst), 1) if lst else None
 
     return {
         "home":       _avg(home_odds_list),
@@ -230,7 +232,8 @@ def _extract_spread(item: dict) -> dict:
                     away_odds_list.append(price)
 
     def _avg(lst):
-        return round(sum(lst) / len(lst), 3) if lst else None
+        # 用中位數聚合，避免離群莊家造成偏誤 [M1]
+        return round(statistics.median(lst), 1) if lst else None
 
     return {
         "line":       _avg(lines),
@@ -256,7 +259,8 @@ def _extract_totals(item: dict) -> dict:
                     under_list.append(price)
 
     def _avg(lst):
-        return round(sum(lst) / len(lst), 3) if lst else None
+        # 用中位數聚合，避免離群莊家造成偏誤 [M1]
+        return round(statistics.median(lst), 1) if lst else None
 
     return {
         "line":       _avg(line_list),
@@ -298,21 +302,29 @@ def remove_vig(home_odds: float, away_odds: float, draw_odds: float = None) -> d
         return {"home_prob": 0.5, "away_prob": 0.5, "draw_prob": 0.0,
                 "vig_pct": 0.0, "confidence": "低"}
 
-def remove_vig_multi_bookmaker(h2h_data: dict) -> dict:
+def remove_vig_multi_bookmaker(h2h_data: dict, home_team: str = "", away_team: str = "") -> dict:
     """
-    多家莊家平均去 Vig。
-    h2h_data = _extract_h2h() 回傳值
+    多家莊家去 Vig（用中位數聚合，避免離群莊家偏誤）。
+    [C2 修正] 嚴格用 home_team/away_team 隊名比對，不靠 outcomes 順序。
     """
+    import statistics
     home_probs, away_probs, draw_probs, vigs = [], [], [], []
 
     for bk in h2h_data.get("bookmakers", []):
         for mkt in bk.get("markets", []):
             if mkt.get("key") != "h2h":
                 continue
-            odds_map = {o["name"]: float(o["price"]) for o in mkt.get("outcomes", [])}
-            home_odds = odds_map.get(list(odds_map.keys())[0]) if odds_map else None
-            away_odds = odds_map.get(list(odds_map.keys())[1]) if len(odds_map) > 1 else None
-            draw_odds = odds_map.get("Draw")
+            # 用隊名比對抓賠率，順序不影響
+            home_odds = away_odds = draw_odds = None
+            for o in mkt.get("outcomes", []):
+                nm = o.get("name", "")
+                pr = float(o.get("price", 0) or 0)
+                if nm == home_team:
+                    home_odds = pr
+                elif nm == away_team:
+                    away_odds = pr
+                elif nm == "Draw":
+                    draw_odds = pr
 
             if not home_odds or not away_odds:
                 continue
@@ -323,21 +335,20 @@ def remove_vig_multi_bookmaker(h2h_data: dict) -> dict:
             vigs.append(r["vig_pct"])
 
     if not home_probs:
-        # fallback to averaged odds
         return remove_vig(
             h2h_data.get("home") or 2.0,
             h2h_data.get("away") or 2.0,
             h2h_data.get("draw"),
         )
 
-    avg = lambda lst: round(sum(lst) / len(lst), 4)
+    med = lambda lst: round(statistics.median(lst), 4) if lst else 0.0
     dispersion = max(home_probs) - min(home_probs) if len(home_probs) > 1 else 0
 
     return {
-        "home_prob":   avg(home_probs),
-        "away_prob":   avg(away_probs),
-        "draw_prob":   avg(draw_probs),
-        "vig_pct":     round(avg(vigs), 2),
+        "home_prob":   med(home_probs),
+        "away_prob":   med(away_probs),
+        "draw_prob":   med(draw_probs),
+        "vig_pct":     round(med(vigs), 2),
         "confidence":  _confidence_from_dispersion(dispersion),
     }
 
