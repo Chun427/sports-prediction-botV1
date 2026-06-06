@@ -24,12 +24,12 @@
         ],
         [
           5,
-          4,
+          5,
           2.4
         ],
         [
           5,
-          5,
+          4,
           2.4
         ],
         [
@@ -56,6 +56,124 @@
       "away_team": "Seattle Mariners",
       "home_short": "Tigers",
       "away_short": "Mariners"
+    }
+  },
+  "ed237b95b2bcbe6bc050a75bcf54cf3b": {
+    "pushed_date": "2026-06-07",
+    "pre_pushed": true,
+    "sim_result": {
+      "home_win_pct": 51.4,
+      "away_win_pct": 48.6,
+      "draw_pct": null,
+      "over_pct": 50.2,
+      "under_pct": 49.8,
+      "home_cover_pct": 35.5,
+      "spread_line": -1.5,
+      "total_line": 8.5,
+      "top5_scores": [
+        [
+          4,
+          4,
+          2.5
+        ],
+        [
+          5,
+          4,
+          2.4
+        ],
+        [
+          4,
+          5,
+          2.4
+        ],
+        [
+          5,
+          5,
+          2.3
+        ],
+        [
+          4,
+          3,
+          2.2
+        ]
+      ],
+      "home_mean": 4.3,
+      "away_mean": 4.2,
+      "pred_mode": "📐 規則模擬",
+      "error": null,
+      "has_value": true,
+      "value_team": "away",
+      "value_edge": 5.8,
+      "home_edge": -5.8,
+      "away_edge": 5.8,
+      "kelly_pct": 5.8,
+      "confidence": "🟡 中",
+      "spread_line_txt": "Twins +1.5｜覆蓋率 35.5%",
+      "market_home_prob": 57.2,
+      "market_away_prob": 42.8,
+      "home_team": "Minnesota Twins",
+      "away_team": "Kansas City Royals",
+      "home_short": "Twins",
+      "away_short": "Royals"
+    }
+  },
+  "c516931bbaf1d49406d58e749625e96a": {
+    "pushed_date": "2026-06-07",
+    "pre_pushed": true,
+    "sim_result": {
+      "home_win_pct": 50.7,
+      "away_win_pct": 49.3,
+      "draw_pct": null,
+      "over_pct": 44.1,
+      "under_pct": 55.9,
+      "home_cover_pct": 34.9,
+      "spread_line": -1.5,
+      "total_line": 9.0,
+      "top5_scores": [
+        [
+          5,
+          4,
+          2.5
+        ],
+        [
+          4,
+          5,
+          2.4
+        ],
+        [
+          4,
+          4,
+          2.4
+        ],
+        [
+          5,
+          5,
+          2.4
+        ],
+        [
+          5,
+          3,
+          2.1
+        ]
+      ],
+      "home_mean": 4.5,
+      "away_mean": 4.5,
+      "pred_mode": "📐 規則模擬",
+      "error": null,
+      "has_value": false,
+      "value_team": "",
+      "value_edge": 3.0,
+      "home_edge": -3.0,
+      "away_edge": 3.0,
+      "kelly_pct": 0.0,
+      "confidence": "🟢 高",
+      "spread_line_txt": "Cardinals +1.5｜覆蓋率 34.9%",
+      "market_home_prob": 53.7,
+      "market_away_prob": 46.3,
+      "home_team": "St. Louis Cardinals",
+      "away_team": "Cincinnati Reds",
+      "home_short": "Cardinals",
+      "away_short": "Reds"
     }
   }
 }
