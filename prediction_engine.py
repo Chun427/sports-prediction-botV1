@@ -396,16 +396,14 @@ def run_full_prediction(game_data: dict) -> dict:
 
     vb = detect_value_bet(model_home, model_away, market_home, market_away)
 
-    # Kelly：使用勝率最高那隊的賠率
+    # Kelly：只在有 Value 時計算，無 Value → 0（避免 silent wrong output [C3]）
     h2h = game_data.get("h2h_odds", {})
-    if vb["value_team"] == "home":
-        best_odds = float(h2h.get("home") or 2.0)
-        best_prob = model_home
+    if vb["has_value"] and vb["value_team"] == "home":
+        kelly_pct = kelly_criterion(model_home, float(h2h.get("home") or 2.0))
+    elif vb["has_value"] and vb["value_team"] == "away":
+        kelly_pct = kelly_criterion(model_away, float(h2h.get("away") or 2.0))
     else:
-        best_odds = float(h2h.get("away") or 2.0)
-        best_prob = model_away
-
-    kelly_pct = kelly_criterion(best_prob, best_odds)
+        kelly_pct = 0.0   # 無 Value Bet，不建議下注
 
     # 信心指數
     confidence = game_data.get("vig_result", {}).get("confidence", "🔴 低")
