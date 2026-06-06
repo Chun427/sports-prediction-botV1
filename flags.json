@@ -1,1 +1,61 @@
-{}
+{
+  "5d56d7bc8e07f9dd9a440c554bcaba58": {
+    "pushed_date": "2026-06-07",
+    "pre_pushed": true,
+    "sim_result": {
+      "home_win_pct": 49.1,
+      "away_win_pct": 50.9,
+      "draw_pct": null,
+      "over_pct": 44.1,
+      "under_pct": 55.9,
+      "home_cover_pct": 64.9,
+      "spread_line": 1.5,
+      "total_line": 9.0,
+      "top5_scores": [
+        [
+          4,
+          5,
+          2.5
+        ],
+        [
+          4,
+          4,
+          2.4
+        ],
+        [
+          5,
+          4,
+          2.4
+        ],
+        [
+          5,
+          5,
+          2.4
+        ],
+        [
+          4,
+          6,
+          2.1
+        ]
+      ],
+      "home_mean": 4.5,
+      "away_mean": 4.5,
+      "pred_mode": "📐 規則模擬",
+      "error": null,
+      "has_value": false,
+      "value_team": "",
+      "value_edge": 3.3,
+      "home_edge": 3.3,
+      "away_edge": -3.3,
+      "kelly_pct": 0.0,
+      "confidence": "🟢 高",
+      "spread_line_txt": "Tigers -1.5｜覆蓋率 64.9%",
+      "market_home_prob": 45.8,
+      "market_away_prob": 54.2,
+      "home_team": "Detroit Tigers",
+      "away_team": "Seattle Mariners",
+      "home_short": "Tigers",
+      "away_short": "Mariners"
+    }
+  }
+}
