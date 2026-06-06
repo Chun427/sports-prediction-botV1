@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 TW = timezone(timedelta(hours=8))
 
 FORCE_TRIGGER_HOURS = 4   # completed=False 但逾 N 小時強制觸發
-PRE_PUSH_MINUTES  = 40    # 賽前推播窗口（40min buffer 避免每小時 cron miss）
+PRE_PUSH_MINUTES  = 90    # ← 從 40 改為 90，確保每小時 cron 必然命中窗口
 POST_PUSH_MINUTES = 60    # 賽後推播窗口
 
 
@@ -114,18 +114,14 @@ def _empty_verify() -> dict:
 #  時間視窗判斷
 # ══════════════════════════════════════════════════════════
 
-# ── 推播視窗（兩層職責分離）──────────────────────────────
-# Layer 1 is_in_pool()：今天的比賽 → 進池（不管幾小時後）
-# Layer 2 is_push_ready()：距開賽 PUSH_BEFORE_H 小時內 → 才推播
-PUSH_BEFORE_H = 3.0    # 開賽前 N 小時才推播通知
-PUSH_AFTER_H  = 0.5    # 開賽後 N 小時內仍可補推
+PUSH_BEFORE_H = 3.0
+PUSH_AFTER_H  = 0.5
 
 
 def is_in_pool(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
     Layer 1：建池判斷。
     只要是台灣時間今天的比賽（且尚未結束超過 3 小時），就放進池。
-    不做推播時間判斷。
     """
     now_tw  = datetime.now(TW)
     game_dt = _parse_utc_to_tw(game_time_utc)
@@ -168,7 +164,11 @@ def is_pre_push_window(game_time_utc: str, game_time_tw: str = "") -> bool:
     """
     Phase 3 唯一賽前推播條件：
     距開賽時間 <= PRE_PUSH_MINUTES 分鐘，且尚未開賽（diff >= 0）。
-    名實相符：推播標語「賽前 30 分鐘」。
+
+    改為 90 分鐘的原因：
+    每小時 cron 執行一次，40 分鐘窗口會導致開賽時間落在
+    cron 執行點 40~60 分鐘後的比賽永遠被跳過。
+    90 分鐘窗口確保任何比賽都至少被一次 cron 命中。
     """
     now_tw  = datetime.now(TW)
     game_dt = _parse_utc_to_tw(game_time_utc)
@@ -197,7 +197,6 @@ def is_post_push_window(game_time_utc: str, game_time_tw: str = "",
         game_dt = _parse_tw_str(game_time_tw)
     if game_dt is None:
         return False
-    # 估計結束時間 = 開賽時間 + duration_min
     end_dt   = game_dt + timedelta(minutes=duration_min)
     diff_min = (now_tw - end_dt).total_seconds() / 60
     return 0 <= diff_min <= POST_PUSH_MINUTES
@@ -268,13 +267,12 @@ def auto_results(games: list[dict]) -> list[dict]:
         game_id = game.get("game_id", "")
         try:
             if not dm.get_flag(game_id).get("pre_pushed"):
-                continue   # 賽前未推，跳過
+                continue
             if dm.is_post_pushed(game_id):
-                continue   # 已推過賽後，跳過
+                continue
 
             game_time_utc = game.get("game_time_utc", "")
 
-            # 抓取比分
             result = df.fetch_game_result(game)
             completed = result.get("completed", False) if result else False
             force     = should_force_trigger(game_time_utc, completed)
@@ -285,15 +283,13 @@ def auto_results(games: list[dict]) -> list[dict]:
                 continue
 
             if not completed and not force:
-                continue   # 還沒完賽且未到強制觸發時間
+                continue
 
-            # 取回賽前模擬結果
             sim_result = dm.get_sim_result(game_id)
             if not sim_result:
                 logger.warning("[verifier] game_id=%s 無賽前模擬快取，重新補填空快取", game_id)
                 sim_result = {}
 
-            # 補充 team 名稱（給 verifier 用）
             sim_result["home_team"]  = game.get("home_team", "")
             sim_result["away_team"]  = game.get("away_team", "")
             sim_result["home_short"] = game.get("home_short", "")
@@ -301,7 +297,6 @@ def auto_results(games: list[dict]) -> list[dict]:
 
             verify = verify_prediction(sim_result, result)
 
-            # 更新 CSV
             dm.update_post_game_row(game_id, {
                 "actual_home_score": result["home_score"],
                 "actual_away_score": result["away_score"],
