@@ -138,6 +138,10 @@ jobs:
           git add flags.json weekly_games.json team_stats.json \
                   metrics.json historical_dataset.csv \
                   model_A.pkl model_B.pkl 2>/dev/null || true
-          git diff --cached --quiet || \
-            git commit -m "[bot] update state $(date -u +%Y-%m-%d\ %H:%M)" && git push
+          if ! git diff --cached --quiet; then
+            git commit -m "[bot] update state $(date -u +'%Y-%m-%d %H:%M')"
+            git push
+          else
+            echo "無變更，跳過 commit"
+          fi
         continue-on-error: true
