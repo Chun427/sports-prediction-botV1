@@ -40,7 +40,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            flags.json
             weekly_games.json
             team_stats.json
             metrics.json
@@ -118,7 +117,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            flags.json
             weekly_games.json
             team_stats.json
             metrics.json
